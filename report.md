@@ -6,9 +6,9 @@
 As more research has been done with large language models (LLMs), one common result is increasing the size of the model. In recent years, the size of models have grown exponentially, and models cannot fit in single GPU memory. Thus, one goal now is to use fewer parameters and find ways to represent large models more compactly. Existing research has been done to build more efficient LLMs, such as the Lottery Ticket hypothesis to make smaller networks (find important parts of the network, throw away the rest) and distillation. At the same time, another issue lies with attention.
 
 **Optimizing Problem**  
-The core computational bottleneck in transformer models lies in the **scaled dot-product attention mechanism**, which computes pairwise interactions between all tokens in an input sequence of length `n`. This results in a time and space complexity of `O(n^2)`, as the mechanism constructs an `n \times n` attention matrix. Our optimization targets three axes:  
-1. **Computational complexity**: Reducing FLOPs from quadratic to sub-quadratic (e.g., ` O(n \log n) `).  
-2. **Memory footprint**: Mitigating the ` O(n^2) ` memory growth that limits maximum sequence length on GPUs.  
+The core computational bottleneck in transformer models lies in the **scaled dot-product attention mechanism**, which computes pairwise interactions between all tokens in an input sequence of length `n`. This results in a time and space complexity of $O(n^2)$, as the mechanism constructs an $n \times n$ attention matrix. Our optimization targets three axes:  
+1. **Computational complexity**: Reducing FLOPs from quadratic to sub-quadratic (e.g., $O(n \text{ log } n) $).  
+2. **Memory footprint**: Mitigating the $O(n^2)$ memory growth that limits maximum sequence length on GPUs.  
 3. **Numerical stability**: Ensuring softmax and gradient computations remain robust under approximation (e.g., low-precision arithmetic or sparse attention).  
 
 **Importance of Optimizing Attention Mechanisms**
@@ -26,28 +26,26 @@ Transformers underpin modern NLP, but their attention mechanism limits scalabili
 
 2. **Accuracy Retention**:  
    - After replacing the attention mechanism with the optimized variant:  
-     - Maintain `\ge 95\%` of baseline accuracy (e.g., GLUE `\ge 84.1\%`, Wikitext PPL `\le 23.4`).  
+     - Maintain $\ge 95\%$ of baseline accuracy
    - Critical tests:  
-     - **Attention matrix fidelity**: Mean squared error (MSE) `\le 1e-4` between original and optimized attention probabilities.  
-     - **Gradient similarity**: Cosine similarity `\ge 0.95` between gradients of original and optimized attention layers during backward pass.  
+     - **Attention matrix fidelity**: Mean squared error (MSE) $\le 1e-4$ between original and optimized attention probabilities.  
+     - **Gradient similarity**: Cosine similarity $\ge 0.95$ between gradients of original and optimized attention layers during backward pass.  
 
 3. **Throughput Improvement**:  
-   - **Target**: `\ge 20\%` increase in tokens processed per second (TPS) under FP16/AMP.  
+   - **Target**: $\ge 5\%$ increase in tokens processed per second (TPS) under FP16/AMP.  
    - Measurement:  
      - Profile **end-to-end throughput** (preprocessing + forward/backward passes) on A100 GPUs using `torch.profiler`.  
      - Compare optimized vs. baseline for sequence lengths 512–4096.  
-   - Example: Baseline processes 1,200 TPS at `n=1024`; optimized target is `\ge 1,440` TPS.  
 
 4. **Memory Efficiency**:  
-   - **Peak memory reduction**: `\ge 30\%` for sequences `\ge 1024` tokens.  
+   - **Peak memory reduction**: $\ge 30\%$ for sequences $\ge 1024$ tokens.  
    - Measurement:  
      - Use `torch.cuda.max_memory_allocated()` to track GPU memory during:  
        - **Training**: Forward/backward pass of a single batch.  
        - **Inference**: Forward pass only.  
-   - Example: Baseline uses 12.1 GB at `n=2048`; optimized target is `\le 8.5` GB.  
 
 5. **Sub-Quadratic Scaling**:  
-   - **FLOPs reduction**: Achieve empirical complexity closer to ` O(n \log n) ` than ` O(n^2) `.  
+   - **FLOPs reduction**: Achieve empirical complexity closer to $O(n \text{ log } n)` than $O(n^2)$.  
    - Validation:  
      - Fit FLOPs vs. sequence length curve (for `n=256` to `n=4096`) to confirm scaling behavior.  
      - Use PyTorch’s `torch.profiler.profile()` to isolate attention FLOPs.  
