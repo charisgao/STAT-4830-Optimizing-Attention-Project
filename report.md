@@ -3,9 +3,9 @@
 ## Problem Statement
 
 **Optimizing Problem**  
-The core computational bottleneck in transformer models lies in the **scaled dot-product attention mechanism**, which computes pairwise interactions between all tokens in an input sequence of length \( n \). This results in a time and space complexity of \( O(n^2) \), as the mechanism constructs an \( n \times n \) attention matrix. Our optimization targets three axes:  
-1. **Computational complexity**: Reducing FLOPs from quadratic to sub-quadratic (e.g., \( O(n \log n) \)).  
-2. **Memory footprint**: Mitigating the \( O(n^2) \) memory growth that limits maximum sequence length on GPUs.  
+The core computational bottleneck in transformer models lies in the **scaled dot-product attention mechanism**, which computes pairwise interactions between all tokens in an input sequence of length `n`. This results in a time and space complexity of `O(n^2)`, as the mechanism constructs an `n \times n` attention matrix. Our optimization targets three axes:  
+1. **Computational complexity**: Reducing FLOPs from quadratic to sub-quadratic (e.g., ` O(n \log n) `).  
+2. **Memory footprint**: Mitigating the ` O(n^2) ` memory growth that limits maximum sequence length on GPUs.  
 3. **Numerical stability**: Ensuring softmax and gradient computations remain robust under approximation (e.g., low-precision arithmetic or sparse attention).  
 
 **Importance of Optimizing Attention Mechanisms**
@@ -15,14 +15,58 @@ The optimization of attention mechanisms in transformer models is crucial for se
 Transformers underpin modern NLP, but their attention mechanism limits scalability for long sequences (e.g., documents, high-resolution tasks). Optimizing this component reduces hardware costs, enables longer context windows, and improves accessibility for resource-constrained environments.
 
 **Measure of Success**  
-- **FLOPs reduction**: Achieve sub-quadratic complexity (e.g., \( O(n \log n) \)).  
-- **Memory usage**: Reduce peak memory by ≥30% on sequence lengths ≥1024.  
-- **Accuracy**: Maintain ≥95% of baseline accuracy on GLUE/Wikitext benchmarks.  
-- **Speed**: Improve throughput by ≥20% on PyTorch with FP16/AMP.
+1. **Baseline Accuracy**:  
+   - Train a vanilla transformer model (e.g., BERT-base for GLUE, GPT-style for Wikitext) using **standard attention** to establish reference performance.  
+   - Metrics:  
+     - **GLUE**: Exact match (EM) and F1 scores averaged across tasks (e.g., MNLI, QNLI, SST-2).  
+     - **Wikitext**: Perplexity (PPL) on validation set.  
+
+2. **Accuracy Retention**:  
+   - After replacing the attention mechanism with the optimized variant:  
+     - Maintain `\ge 95\%` of baseline accuracy (e.g., GLUE `\ge 84.1\%`, Wikitext PPL `\le 23.4`).  
+   - Critical tests:  
+     - **Attention matrix fidelity**: Mean squared error (MSE) `\le 1e-4` between original and optimized attention probabilities.  
+     - **Gradient similarity**: Cosine similarity `\ge 0.95` between gradients of original and optimized attention layers during backward pass.  
+
+3. **Throughput Improvement**:  
+   - **Target**: `\ge 20\%` increase in tokens processed per second (TPS) under FP16/AMP.  
+   - Measurement:  
+     - Profile **end-to-end throughput** (preprocessing + forward/backward passes) on A100 GPUs using `torch.profiler`.  
+     - Compare optimized vs. baseline for sequence lengths 512–4096.  
+   - Example: Baseline processes 1,200 TPS at `n=1024`; optimized target is `\ge 1,440` TPS.  
+
+4. **Memory Efficiency**:  
+   - **Peak memory reduction**: `\ge 30\%` for sequences `\ge 1024` tokens.  
+   - Measurement:  
+     - Use `torch.cuda.max_memory_allocated()` to track GPU memory during:  
+       - **Training**: Forward/backward pass of a single batch.  
+       - **Inference**: Forward pass only.  
+   - Example: Baseline uses 12.1 GB at `n=2048`; optimized target is `\le 8.5` GB.  
+
+5. **Sub-Quadratic Scaling**:  
+   - **FLOPs reduction**: Achieve empirical complexity closer to ` O(n \log n) ` than ` O(n^2) `.  
+   - Validation:  
+     - Fit FLOPs vs. sequence length curve (for `n=256` to `n=4096`) to confirm scaling behavior.  
+     - Use PyTorch’s `torch.profiler.profile()` to isolate attention FLOPs.  
+
+### Validation Workflow  
+1. **Pretrained Model Compatibility**:  
+   - Load weights from baseline models (e.g., HuggingFace’s `bert-base-uncased`), replace *only* the attention module, and evaluate **without fine-tuning**.  
+   - Ensures optimization does not rely on retraining to "recover" lost accuracy.  
+
+2. **Stress Testing**:  
+   - **Long sequences**: Benchmark memory and speed at `n=8192` (even if baseline crashes).  
+   - **Edge cases**: Sequences with extreme sparsity (e.g., all padding tokens) or high similarity (e.g., repeated tokens).  
+
+3. **Trade-off Analysis**:  
+   - Plot Pareto frontiers for:  
+     - Accuracy vs. memory reduction.  
+     - Throughput vs. sequence length.  
+   - Require optimized model to dominate baseline in at least two metrics without degrading others.  
 
 **Constraints**  
 - Compatibility with standard PyTorch APIs (e.g., `nn.MultiheadAttention`).  
-- Numerical equivalence within \( \epsilon=1e-3 \) for attention probabilities.  
+- Numerical equivalence within ` \epsilon=1e-3 ` for attention probabilities.  
 - No pretrained model retraining for downstream tasks.
 
 **Data Needs**  
@@ -40,15 +84,15 @@ Transformers underpin modern NLP, but their attention mechanism limits scalabili
 ## Technical Approach
 
 **Mathematical Formulation**  
-Let \( Q, K, V \in \mathbb{R}^{n \times d} \). Standard attention computes:  
+Let ` Q, K, V \in \mathbb{R}^{n \times d} `. Standard attention computes:  
 \[
 \text{Attention}(Q,K,V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right)V
 \]  
-We reformulate this with a **rank-\( k \) approximation** (\( k \ll n \)):  
+We reformulate this with a **rank-` k ` approximation** (` k \ll n `):  
 \[
 QK^T \approx (Q\Phi)(K\Phi)^T, \quad \Phi \in \mathbb{R}^{d \times k} \text{ (learnable)}
 \]  
-Subject to \( ||\text{Attention}_{\text{original}} - \text{Attention}_{\text{approx}}||_F \leq \delta \).
+Subject to ` ||\text{Attention}_{\text{original}} - \text{Attention}_{\text{approx}}||_F \leq \delta `.
 
 **Algorithm Choice**  
 - **Linformer-style projection**: Low-rank factorization via learned projections.  
@@ -77,7 +121,7 @@ Subject to \( ||\text{Attention}_{\text{original}} - \text{Attention}_{\text{app
 ## Initial Results
 
 **Implementation Validity**  
-- **Synthetic test**: For \( n=1024, d=64 \), MSE between original and low-rank attention: \( 2.1 \times 10^{-4} \).  
+- **Synthetic test**: For ` n=1024, d=64 `, MSE between original and low-rank attention: ` 2.1 \times 10^{-4} `.  
 - **Gradient flow**: Backward pass succeeds with `torch.autograd.gradcheck`.
 
 **Performance Metrics**  
@@ -92,7 +136,7 @@ Subject to \( ||\text{Attention}_{\text{original}} - \text{Attention}_{\text{app
 - **n=4096**: 27% memory reduction, but 9% slower due to kernel overhead.
 
 **Limitations**  
-- Projection matrix \( \Phi \) increases parameter count by 0.4%.  
+- Projection matrix ` \Phi ` increases parameter count by 0.4%.  
 - Non-determinism in fused kernels (CUDA graph incompatibility).  
 - 5–8% perplexity increase on PG19 (long-context).
 
@@ -109,19 +153,19 @@ Subject to \( ||\text{Attention}_{\text{original}} - \text{Attention}_{\text{app
 ## Next Steps
 
 **Immediate Improvements**  
-- Replace learned \( \Phi \) with Performer-style orthogonal random features.  
+- Replace learned ` \Phi ` with Performer-style orthogonal random features.  
 - Adopt `torch.compile` for kernel fusion without custom CUDA.  
 - Mixed-precision training (AMP) for memory reduction.
 
 **Technical Challenges**  
-- Dynamic sequence length support (variable \( n \)).  
-- Reducing MSE in attention probabilities without increasing rank \( k \).  
+- Dynamic sequence length support (variable ` n `).  
+- Reducing MSE in attention probabilities without increasing rank ` k `.  
 - Distillation from vanilla attention as regularization.
 
 **Questions for Collaborators**  
 - How to balance kernel fusion vs PyTorch compiler limitations?  
 - Are there theoretical lower bounds for attention approximation error?  
-- Optimal projection rank \( k \) for n=8192?
+- Optimal projection rank ` k ` for n=8192?
 
 **Alternative Approaches**  
 - **Block-sparse attention**: Hybrid of local/windowed + global.  
