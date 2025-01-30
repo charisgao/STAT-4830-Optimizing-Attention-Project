@@ -69,14 +69,16 @@ Transformers underpin modern NLP, but their attention mechanism limits scalabili
 - Numerical equivalence within ` \epsilon=1e-3 ` for attention probabilities.  
 - No pretrained model retraining for downstream tasks.
 
-**Data Needs**  
-- Training: Wikitext-103, BooksCorpus.  
-- Validation: GLUE, PG19 (long-context).  
+**Data Needs**
+
+- Training: Wikitext-103, BooksCorpus.
+- Validation: GLUE, PG19 (long-context).
 - Synthetic data for stress-testing (sequence lengths 4K–16K).
 
-**Risks Involved**  
-- Accuracy degradation from over-sparsification.  
-- Kernel fusion failures in PyTorch leading to slower execution.  
+**Risks Involved**
+
+- Accuracy degradation from over-sparsification.
+- Kernel fusion failures in PyTorch leading to slower execution.
 - Numerical instability in low-precision/high-scale scenarios.
 
 ---
@@ -92,28 +94,32 @@ We reformulate this with a **rank-` k ` approximation** (` k \ll n `):
 \[
 QK^T \approx (Q\Phi)(K\Phi)^T, \quad \Phi \in \mathbb{R}^{d \times k} \text{ (learnable)}
 \]  
-Subject to ` ||\text{Attention}_{\text{original}} - \text{Attention}_{\text{approx}}||_F \leq \delta `.
+Subject to \( ||\text{Attention}_{\text{original}} - \text{Attention}_{\text{approx}}||_F \leq \delta \).
 
-**Algorithm Choice**  
-- **Linformer-style projection**: Low-rank factorization via learned projections.  
-- **FlashAttention-inspired tiling**: Memory-aware kernel fusion for GPU efficiency.  
+**Algorithm Choice**
+
+- **Linformer-style projection**: Low-rank factorization via learned projections.
+- **FlashAttention-inspired tiling**: Memory-aware kernel fusion for GPU efficiency.
 - **Gradient checkpointing**: Trade compute for memory in backward pass.
 
-*Justification*: Combines theoretical FLOPs reduction (low-rank) with practical PyTorch optimizations (tiling).
+_Justification_: Combines theoretical FLOPs reduction (low-rank) with practical PyTorch optimizations (tiling).
 
-**PyTorch Implementation**  
-1. Custom `nn.Module` with fused CUDA kernels for projection + softmax.  
-2. Use `torch.utils.checkpoint` for memory reduction.  
+**PyTorch Implementation**
+
+1. Custom `nn.Module` with fused CUDA kernels for projection + softmax.
+2. Use `torch.utils.checkpoint` for memory reduction.
 3. Profile with PyTorch Profiler and `memory_stats()` API.
 
-**Validation**  
-- **Numerical**: Mean squared error (MSE) of attention matrices.  
-- **Task performance**: Fine-tuning BERT-base on GLUE.  
+**Validation**
+
+- **Numerical**: Mean squared error (MSE) of attention matrices.
+- **Task performance**: Fine-tuning BERT-base on GLUE.
 - **Speed/memory**: Benchmark against `xformers` library.
 
-**Resource Requirements**  
-- GPU: A100 (40GB) for sequence length ≥4096.  
-- Dataset storage: 500GB (Wikitext + PG19).  
+**Resource Requirements**
+
+- GPU: A100 (40GB) for sequence length ≥4096.
+- Dataset storage: 500GB (Wikitext + PG19).
 - Constraints: PyTorch 2.0+; no Triton dependencies.
 
 ---
@@ -121,18 +127,19 @@ Subject to ` ||\text{Attention}_{\text{original}} - \text{Attention}_{\text{appr
 ## Initial Results
 
 **Implementation Validity**  
-- **Synthetic test**: For ` n=1024, d=64 `, MSE between original and low-rank attention: ` 2.1 \times 10^{-4} `.  
+- **Synthetic test**: For \( n=1024, d=64 \), MSE between original and low-rank attention: \( 2.1 \times 10^{-4} \).  
 - **Gradient flow**: Backward pass succeeds with `torch.autograd.gradcheck`.
 
 **Performance Metrics**  
-| Metric              | Baseline (vanilla) | Optimized | Change  |
+| Metric | Baseline (vanilla) | Optimized | Change |
 |----------------------|--------------------|-----------|---------|
-| Memory (n=2048)      | 12.1 GB            | 7.8 GB    | -35.5%  |
-| Forward time (ms)    | 142 ± 4            | 118 ± 3   | -16.9%  |
-| WikiText perplexity  | 22.3               | 23.1      | +3.6%   |
+| Memory (n=2048) | 12.1 GB | 7.8 GB | -35.5% |
+| Forward time (ms) | 142 ± 4 | 118 ± 3 | -16.9% |
+| WikiText perplexity | 22.3 | 23.1 | +3.6% |
 
-**Test Cases**  
-- **n=512**: No accuracy drop on SST-2 (91.2% vs 91.5%).  
+**Test Cases**
+
+- **n=512**: No accuracy drop on SST-2 (91.2% vs 91.5%).
 - **n=4096**: 27% memory reduction, but 9% slower due to kernel overhead.
 
 **Limitations**  
@@ -140,12 +147,14 @@ Subject to ` ||\text{Attention}_{\text{original}} - \text{Attention}_{\text{appr
 - Non-determinism in fused kernels (CUDA graph incompatibility).  
 - 5–8% perplexity increase on PG19 (long-context).
 
-**Resource Usage**  
-- GPU memory variance: ±0.3 GB across runs (PyTorch fragmentation).  
+**Resource Usage**
+
+- GPU memory variance: ±0.3 GB across runs (PyTorch fragmentation).
 - CPU RAM: 18 GB (data loading bottleneck).
 
-**Unexpected Challenges**  
-- PyTorch’s `torch.jit.script` failed to optimize fused kernels.  
+**Unexpected Challenges**
+
+- PyTorch’s `torch.jit.script` failed to optimize fused kernels.
 - FP16 instability in projection gradients required manual scaling.
 
 ---
@@ -165,14 +174,16 @@ Subject to ` ||\text{Attention}_{\text{original}} - \text{Attention}_{\text{appr
 **Questions for Collaborators**  
 - How to balance kernel fusion vs PyTorch compiler limitations?  
 - Are there theoretical lower bounds for attention approximation error?  
-- Optimal projection rank ` k ` for n=8192?
+- Optimal projection rank \( k \) for n=8192?
 
-**Alternative Approaches**  
-- **Block-sparse attention**: Hybrid of local/windowed + global.  
-- **Recurrent memory**: Compress KV cache into fixed-size state.  
+**Alternative Approaches**
+
+- **Block-sparse attention**: Hybrid of local/windowed + global.
+- **Recurrent memory**: Compress KV cache into fixed-size state.
 - **Quantization**: 4-bit KV cache with adaptive scaling.
 
-**Lessons Learned**  
-- PyTorch’s memory profiler is critical for attention optimization.  
-- Low-rank methods need careful initialization (Xavier + orthogonal).  
+**Lessons Learned**
+
+- PyTorch’s memory profiler is critical for attention optimization.
+- Low-rank methods need careful initialization (Xavier + orthogonal).
 - Kernel implementation can dominate theoretical FLOPs benefits.
