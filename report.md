@@ -2,6 +2,9 @@
 
 ## Problem Statement
 
+**Background**
+As more research has been done with large language models (LLMs), one common result is increasing the size of the model. In recent years, the size of models have grown exponentially, and models cannot fit in single GPU memory. Thus, one goal now is to use fewer parameters and find ways to represent large models more compactly. Existing research has been done to build more efficient LLMs, such as the Lottery Ticket hypothesis to make smaller networks (find important parts of the network, throw away the rest) and distillation. At the same time, another issue lies with attention.
+
 **Optimizing Problem**  
 The core computational bottleneck in transformer models lies in the **scaled dot-product attention mechanism**, which computes pairwise interactions between all tokens in an input sequence of length `n`. This results in a time and space complexity of `O(n^2)`, as the mechanism constructs an `n \times n` attention matrix. Our optimization targets three axes:  
 1. **Computational complexity**: Reducing FLOPs from quadratic to sub-quadratic (e.g., ` O(n \log n) `).  
