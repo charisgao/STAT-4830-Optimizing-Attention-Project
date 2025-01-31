@@ -8,6 +8,8 @@ We seek to overcome the inherent $O(n^2)$ time and memory bottleneck in Transfor
 
 ### Why Does This Problem Matter?
 
+As more research has been done with large language models (LLMs), one common result is increasing the size of the model. In recent years, the size of models have grown exponentially, and models cannot fit in single GPU memory. Thus, one goal now is to use fewer parameters and find ways to represent large models more compactly. Existing research has been done to build more efficient LLMs, such as the Lottery Ticket hypothesis to make smaller networks (find important parts of the network, throw away the rest) and distillation. At the same time, another issue lies with attention.
+
 Transformer-based language models have become central to a wide variety of NLP tasks, but they quickly become impractical for very long sequences due to quadratic complexity. Improving their attention efficiency can:
 
 -   **Enable Longer Contexts**: Handle documents or tasks requiring thousands of tokens.
@@ -74,6 +76,7 @@ summed over all training examples $X$. This objective encourages the custom atte
     - Critical tests:
         - **Attention matrix fidelity**: Mean squared error (MSE) $\le 1e-4$ between original and optimized attention probabilities.
         - **Gradient similarity**: Cosine similarity $\ge 0.95$ between gradients of original and optimized attention layers during backward pass.
+        - **KL Divergence**: Divergence between the two probability distribution of next token $\le 0.001$.
 2. **Memory Efficiency**:
     - **Peak memory reduction**: $\ge 30\%$ for sequences $\ge 1024$ tokens.
     - Measurement:
@@ -103,7 +106,7 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 So far, we have done a **toy demonstration** on a small synthetic dataset plus a few samples from WikiText-2 using a GPT-2–style model. Specifically, we:
 
--   Replaced full self-attention with a **fixed "last-5-tokens"** window, rather than a learned sparse mask.
+-   Replaced full self-attention with a **fixed "last-10-tokens"** window, rather than a learned sparse mask.
 -   Froze most GPT-2 parameters, except for our custom attention block and some MLP layers.
 -   Trained by minimizing KL-divergence between the custom model's outputs and the reference GPT-2 on short snippets of text.
 
@@ -157,7 +160,7 @@ Below are selected generation samples using the same prompts for both the refere
 
 ### Resource Usage Measurements
 
--   On a CPU, this ran very quickly with just the toy model.
+-   On one T4 GPU on Google Colab, this ran very quickly with just the toy model.
 -   These resource measurements are modest because our demonstration used a restricted sequence length and a small amount of data.
 
 ### Unexpected challenges
