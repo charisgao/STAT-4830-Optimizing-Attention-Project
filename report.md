@@ -27,6 +27,7 @@ We are currently focusing on **WikiText-2** as our primary dataset for language 
 -   Process sequences of up to 512 tokens (as a starting point) on a single GPU without out-of-memory errors.
 -   Implement the code in standard PyTorch, avoiding highly specialized CUDA kernels.
 -   Retain acceptable generation quality while freezing most of the baseline model parameters.
+-   Compatibility with standard PyTorch APIs (e.g., `nn.MultiheadAttention`).
 
 ### What Data Do We Need?
 
@@ -65,10 +66,29 @@ summed over all training examples $X$. This objective encourages the custom atte
 3. **Loss Computation**: Compute logits from both models on the same input batch, then apply KL-divergence.
 4. **Parameter Updates**: Use standard optimization (e.g., AdamW) to train the new attention module while freezing or partially freezing other layers.
 
+### Measure of Success
+
+1. **Accuracy Retention**:
+    - After replacing the attention mechanism with the optimized variant:
+        - Maintain $\ge 95\%$ of baseline accuracy
+    - Critical tests:
+        - **Attention matrix fidelity**: Mean squared error (MSE) $\le 1e-4$ between original and optimized attention probabilities.
+        - **Gradient similarity**: Cosine similarity $\ge 0.95$ between gradients of original and optimized attention layers during backward pass.
+2. **Memory Efficiency**:
+    - **Peak memory reduction**: $\ge 30\%$ for sequences $\ge 1024$ tokens.
+    - Measurement:
+        - Use `torch.cuda.max_memory_allocated()` to track GPU memory during:
+            - **Training**: Forward/backward pass of a single batch.
+            - **Inference**: Forward pass only.
+        - Use PyTorch's `torch.profiler.profile()` to isolate attention operations.
+
 ### Validation Methods
 
 -   **Validation Loss**: Track KL-divergence on a held-out set to ensure the custom model matches the baseline distribution over time.
+    -   Load weights from baseline models (e.g., HuggingFace's `bert-base-uncased`), replace _only_ the attention module, and evaluate **without fine-tuning**.
+    -   Ensures optimization does not rely on retraining to "recover" lost accuracy.
 -   **Perplexity/Accuracy**: Evaluate on standard tasks (e.g., language modeling or classification) to ensure minimal drop in performance.
+-   **Edge cases**: Sequences with extreme sparsity (e.g., all padding tokens) or high similarity (e.g., repeated tokens).
 -   **Scalability Tests**: Gradually increase input sequence lengths and measure memory usage, throughput, and any speed improvements.
 
 ### Resource Requirements and Constraints
@@ -144,6 +164,7 @@ Below are selected generation samples using the same prompts for both the refere
 
 -   **Limited Coherence**: Attending to only 5 previous tokens degrades text coherence. We will need more sophisticated masking to handle longer contexts properly.
 -   **Overfitting**: Because our dataset was tiny, we saw the model quickly saturate or jump around in text quality, suggesting the need for better regularization.
+-   **Accuracy Concerns**: Potential accuracy degradation from over-sparsification.
 
 ---
 
@@ -178,72 +199,3 @@ Below are selected generation samples using the same prompts for both the refere
 -   **KL-Divergence Feasibility**: Minimizing KL directly is an effective way to align two models' distributions.
 -   **Attention Substitution**: Swapping out the standard self-attention module is straightforward if we mirror the input-output shapes and track weights carefully.
 -   **Moving to Larger Scales**: Small demos are fine for proof-of-concept, but we'll need more robust engineering and data scaling to see real memory or speed benefits in practice.
-
-### Other potentially useful metrics
-
-**Measure of Success**
-
-1. **Baseline Accuracy**:
-
-    - Train a vanilla transformer model (e.g., BERT-base for GLUE, GPT-style for Wikitext) using **standard attention** to establish reference performance.
-    - Metrics:
-        - **GLUE**: Exact match (EM) and F1 scores averaged across tasks (e.g., MNLI, QNLI, SST-2).
-        - **Wikitext**: Perplexity (PPL) on validation set.
-
-2. **Accuracy Retention**:
-
-    - After replacing the attention mechanism with the optimized variant:
-        - Maintain $\ge 95\%$ of baseline accuracy
-    - Critical tests:
-        - **Attention matrix fidelity**: Mean squared error (MSE) $\le 1e-4$ between original and optimized attention probabilities.
-        - **Gradient similarity**: Cosine similarity $\ge 0.95$ between gradients of original and optimized attention layers during backward pass.
-
-3. **Memory Efficiency**:
-
-    - **Peak memory reduction**: $\ge 30\%$ for sequences $\ge 1024$ tokens.
-    - Measurement:
-        - Use `torch.cuda.max_memory_allocated()` to track GPU memory during:
-            - **Training**: Forward/backward pass of a single batch.
-            - **Inference**: Forward pass only.
-
-4. **Sub-Quadratic Scaling**:
-    - **FLOPs reduction**: Achieve empirical complexity closer to $O(n \text{ log } n)` than $O(n^2)$.
-    - Validation:
-        - Fit FLOPs vs. sequence length curve (for `n=256` to `n=4096`) to confirm scaling behavior.
-        - Use PyTorch's `torch.profiler.profile()` to isolate attention FLOPs.
-
-### Validation Workflow
-
-1. **Pretrained Model Compatibility**:
-
-    - Load weights from baseline models (e.g., HuggingFace's `bert-base-uncased`), replace _only_ the attention module, and evaluate **without fine-tuning**.
-    - Ensures optimization does not rely on retraining to "recover" lost accuracy.
-
-2. **Stress Testing**:
-
-    - **Long sequences**: Benchmark memory and speed at `n=8192` (even if baseline crashes).
-    - **Edge cases**: Sequences with extreme sparsity (e.g., all padding tokens) or high similarity (e.g., repeated tokens).
-
-3. **Trade-off Analysis**:
-    - Plot Pareto frontiers for:
-        - Accuracy vs. memory reduction.
-        - Throughput vs. sequence length.
-    - Require optimized model to dominate baseline in at least two metrics without degrading others.
-
-**Constraints**
-
--   Compatibility with standard PyTorch APIs (e.g., `nn.MultiheadAttention`).
--   Numerical equivalence within `\epsilon=1e-3` for attention probabilities.
--   No pretrained model retraining for downstream tasks.
-
-**Data Needs**
-
--   Training: Wikitext-103, BooksCorpus.
--   Validation: GLUE, PG19 (long-context).
--   Synthetic data for stress-testing (sequence lengths 4K–16K).
-
-**Risks Involved**
-
--   Accuracy degradation from over-sparsification.
--   Kernel fusion failures in PyTorch leading to slower execution.
--   Numerical instability in low-precision/high-scale scenarios.
