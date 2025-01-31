@@ -2,20 +2,160 @@
 
 ## Problem Statement
 
-**Background**
-As more research has been done with large language models (LLMs), one common result is increasing the size of the model. In recent years, the size of models have grown exponentially, and models cannot fit in single GPU memory. Thus, one goal now is to use fewer parameters and find ways to represent large models more compactly. Existing research has been done to build more efficient LLMs, such as the Lottery Ticket hypothesis to make smaller networks (find important parts of the network, throw away the rest) and distillation. At the same time, another issue lies with attention.
+### What Are We Optimizing?
+We seek to overcome the inherent $O(n^2)$ time and memory bottleneck in Transformer attention by **learning which tokens** in the sequence to focus on. Instead of attending to all previous tokens, our long-term goal is to develop a **customizable attention mask** that pinpoints only the most relevant parts of the input. We plan to train this customized attention to produce outputs similar to a baseline (unmodified) Transformer. By minimizing the difference (KL-divergence) between the baseline and our custom model, we aim to preserve model quality while reducing computational cost by minimizing the number of tokens required in the attention mechanism.
 
-**Optimizing Problem**  
-The core computational bottleneck in transformer models lies in the **scaled dot-product attention mechanism**, which computes pairwise interactions between all tokens in an input sequence of length `n`. This results in a time and space complexity of $O(n^2)$, as the mechanism constructs an $n \times n$ attention matrix. Our optimization targets three axes:  
-1. **Computational complexity**: Reducing FLOPs from quadratic to sub-quadratic (e.g., $O(n \text{ log } n) $).  
-2. **Memory footprint**: Mitigating the $O(n^2)$ memory growth that limits maximum sequence length on GPUs.  
-3. **Numerical stability**: Ensuring softmax and gradient computations remain robust under approximation (e.g., low-precision arithmetic or sparse attention).  
+### Why Does This Problem Matter?
+Transformer-based language models have become central to a wide variety of NLP tasks, but they quickly become impractical for very long sequences due to quadratic complexity. Improving their attention efficiency can:
+- **Enable Longer Contexts**: Handle documents or tasks requiring thousands of tokens.  
+- **Reduce Hardware Costs**: Lower memory usage means more feasible deployment.  
+- **Maintain Accuracy**: Achieve similar or near-equivalent performance as full attention.
 
-**Importance of Optimizing Attention Mechanisms**
+### How Will We Measure Success?
+1. **Accuracy Retention**: Does the custom attention model perform comparably to the baseline on text tasks (e.g., perplexity, F1, or other relevant metrics)?  
+2. **Computational Improvement**: We will track how well the approach scales with sequence length, aiming for reduced memory usage or speed gains.  
+3. **Distribution Alignment**: A lower KL-divergence between the custom model's outputs and the baseline model signals successful attention optimization.
 
-The optimization of attention mechanisms in transformer models is crucial for several reasons. As transformer architectures become the backbone of numerous state-of-the-art natural language processing tasks, their efficiency directly impacts the feasibility of deploying these models in real-world applications. By addressing the inherent computational and memory challenges, we can enable the use of transformers in resource-constrained environments, making advanced AI technologies more accessible. Furthermore, improving the scalability of attention mechanisms allows for processing longer sequences, which is essential for tasks such as document understanding and high-resolution image analysis. Ultimately, optimizing these mechanisms not only enhances performance but also broadens the applicability of transformer models across various domains.
+### What Are Our Constraints?
+We are currently focusing on **WikiText-2** as our primary dataset for language modeling. It is freely available, moderate in size (roughly 2 million tokens), and standard for benchmarking. We must be able to:
+- Process sequences of up to 512 tokens (as a starting point) on a single GPU without out-of-memory errors.
+- Implement the code in standard PyTorch, avoiding highly specialized CUDA kernels.
+- Retain acceptable generation quality while freezing most of the baseline model parameters.
 
-Transformers underpin modern NLP, but their attention mechanism limits scalability for long sequences (e.g., documents, high-resolution tasks). Optimizing this component reduces hardware costs, enables longer context windows, and improves accessibility for resource-constrained environments.
+### What Data Do We Need?
+- **WikiText-2** for initial experimentation and evaluation.  
+- Potentially **WikiText-103** or other larger corpora as we scale up the approach and test longer context windows.  
+- For thorough testing, we may also include smaller validation sets to measure perplexity and check overfitting.
+
+### What Could Go Wrong?
+- **Underfitting**: If the custom mask prunes too aggressively, performance or fidelity may drop significantly.  
+- **Overhead vs. Benefit**: A clever mask may still impose overhead that negates memory/computational gains if it's not efficiently implemented.  
+- **Instability**: With a learnable attention mask, training might become unstable or sensitive to hyperparameters.
+
+---
+
+## Technical Approach
+
+### Mathematical Formulation
+We define two Transformer models: a **baseline** and a **custom**. If $P_{\text{base}}(\cdot\mid X)$ is the baseline output distribution and $P_{\text{custom}}(\cdot\mid X)$ is our custom model's distribution, we minimize:
+
+$$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} \,\|\, P_{\text{custom}}\bigr)$$
+
+summed over all training examples $X$. This objective encourages the custom attention to preserve the baseline model's behavior.
+
+### Algorithm/Approach Choice and Justification
+- **Adaptive Attention Mask**: Long-term, we want to learn a sparse mask or restricted set of tokens that provide sufficient context with fewer computations.  
+- **KL-Divergence Alignment**: By aligning probabilities, we ensure that any modifications to attention remain faithful to the baseline's predictions.  
+- **Sub-Quadratic Focus**: The ultimate aim is to reduce attention complexity from $O(n^2)$ to something more tractable for large $n$.
+
+### PyTorch Implementation Strategy
+1. **Baseline Model**: A larger, established Transformer architecture loaded from a standard library (e.g., Hugging Face).  
+2. **Custom Attention Module**: Replace the default attention with a mechanism that only processes a subset of tokens, with learnable parameters dictating which tokens matter most.  
+3. **Loss Computation**: Compute logits from both models on the same input batch, then apply KL-divergence.  
+4. **Parameter Updates**: Use standard optimization (e.g., AdamW) to train the new attention module while freezing or partially freezing other layers.
+
+### Validation Methods
+- **Validation Loss**: Track KL-divergence on a held-out set to ensure the custom model matches the baseline distribution over time.  
+- **Perplexity/Accuracy**: Evaluate on standard tasks (e.g., language modeling or classification) to ensure minimal drop in performance.  
+- **Scalability Tests**: Gradually increase input sequence lengths and measure memory usage, throughput, and any speed improvements.
+
+### Resource Requirements and Constraints
+- **Single GPU Usage**: We plan to use one GPU for training and validation on WikiText-2 (with sequences up to 512 tokens).  
+- **Training Times**: Expect shorter runs (on the order of a few hours) to confirm feasibility.  
+- **Future Scaling**: After proving the concept, we may switch to a more powerful GPU and larger corpora (WikiText-103 or beyond).
+
+---
+
+## Initial Results
+
+So far, we have done a **toy demonstration** on a small synthetic dataset plus a few samples from WikiText-2 using a GPT-2–style model. Specifically, we:
+- Replaced full self-attention with a **fixed "last-5-tokens"** window, rather than a learned sparse mask.  
+- Froze most GPT-2 parameters, except for our custom attention block and some MLP layers.  
+- Trained by minimizing KL-divergence between the custom model's outputs and the reference GPT-2 on short snippets of text.
+
+In the future, we intend to extend this approach to **learn** which tokens are most crucial, potentially reducing the attention's computational footprint. However, we did this toy example just to get the code up and running, and to see that we could indeed set up a framework to minimize the KL-divergence between two models. In the future we will expand this to actually optimize for a custom attention mask.
+
+**Key Observations**  
+- The code runs end-to-end without errors, and the custom attention layer can learn to partially mimic the baseline's next-token predictions.  
+- KL-divergence decreases steadily, confirming that the custom model is aligning its output distribution to GPT-2's.  
+- We **did not** measure or improve memory usage—the code as written does **not** yet aim for sub-quadratic complexity or large-scale efficiency gains.  
+
+### Evidence your implementation works
+- **Successful Training Loop**: Over 100 epochs, the KL-divergence–based loss steadily decreased from about 1.61 down to near 0.07 on our toy data, indicating the custom attention can mimic the reference model's distributions.  
+- **Text Generation**: We tested with a few prompts, observing that our custom model produced text in a style similar to GPT-2, though often less coherent due to the limited "last-5-tokens" context.
+
+### Basic performance metrics
+Here are the loss values (KL-divergence) across epochs (only partial data shown):
+
+```
+Epoch 1 | Loss: 1.6116...
+Epoch 20 | Loss: 0.2843...
+Epoch 40 | Loss: 0.1558 ...
+Epoch 60 | Loss: 0.1164 ...
+Epoch 80 | Loss: 0.0874 ...
+Epoch 100 | Loss: 0.0780
+```
+
+The consistent downward trend demonstrates that the custom attention mechanism aligns progressively better with the baseline.
+
+### Test case results
+Below are selected generation samples using the same prompts for both the reference and custom models. While the custom model's outputs sometimes drift or become less coherent, they still roughly follow the prompts and produce recognizable English words. This shows the model is capturing some of GPT-2's distribution, though it's obviously not perfect.
+
+**Prompt**: Hello, my name is  
+- **Reference**: … I am the founder of Inoscular Robotics ...
+- **Custom**: … I have you doing so much easier than ever ...
+
+**Prompt**: The meaning of life is  
+- **Reference**: … matter's consciousness. True, you can stop ...
+- **Custom**: … a newbies for what, welcome as an earthquake ...
+
+### Current Limitations
+- **Minimal Dataset**: Synthetic or small text corpora, offering limited insight into real-world performance.  
+- **No Actual Mask Optimization**: We used a fixed window, so there's no dynamic or learned mechanism yet.  
+- **No Large Model**: GPT-2 was used purely for demonstration; we have not tested on bigger or more modern architectures.
+
+### Resource Usage Measurements
+- On a CPU, this ran very quickly with just the toy model.
+- These resource measurements are modest because our demonstration used a restricted sequence length and a small amount of data.
+
+### Unexpected challenges
+- **Limited Coherence**: Attending to only 5 previous tokens degrades text coherence. We will need more sophisticated masking to handle longer contexts properly.  
+- **Overfitting**: Because our dataset was tiny, we saw the model quickly saturate or jump around in text quality, suggesting the need for better regularization.
+
+---
+
+## Next Steps
+
+### Immediate improvements needed
+- **Implement Adaptive Mask Learning**: Replace the fixed "last-5-tokens" approach with a truly learnable attention pattern that selects crucial tokens.  
+- **Extend Training Data**: Use the full WikiText-2 dataset (rather than just snippets) to get more realistic coverage and reduce overfitting.  
+- **Fine-Tune Hyperparameters**: Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
+
+### Technical Challenges to Address
+- **Efficiency of Sparse Attention**: We need a way to apply sparse or partial attention without incurring large overhead.  
+- **Scalability**: Ensuring the method works for sequence lengths of 512 or more without requiring excessive memory.  
+- **Maintaining Baseline Accuracy**: Preserving perplexity and text coherence while discarding tokens.
+
+### Questions You Need Help With
+1. **Optimal Mask Strategies**: Are there known best practices for learning which tokens should be attended to (e.g., a gating network vs. differentiable top-k)?  
+2. **Larger Model Considerations**: How might we adapt the approach to scale beyond GPT-2?  
+3. **Regularization**: How to prevent overfitting on a smaller corpus when learning an attention pattern?
+
+### Alternative Approaches to Try
+- **Blockwise or Local Attention**: Constrain attention to segments of the sequence to simplify training and reduce overhead.  
+- **Random Feature Methods** (e.g., Performer): Approximate full attention with random projections.  
+- **Distillation**: Use the baseline model's outputs not just for KL-divergence, but also for intermediate-layer distillation to shape attention.
+
+### What You've Learned So Far
+- **KL-Divergence Feasibility**: Minimizing KL directly is an effective way to align two models' distributions.  
+- **Attention Substitution**: Swapping out the standard self-attention module is straightforward if we mirror the input-output shapes and track weights carefully.  
+- **Moving to Larger Scales**: Small demos are fine for proof-of-concept, but we'll need more robust engineering and data scaling to see real memory or speed benefits in practice.
+
+
+
+
+
+### Other potentially useful metrics
 
 **Measure of Success**  
 1. **Baseline Accuracy**:  
@@ -31,12 +171,6 @@ Transformers underpin modern NLP, but their attention mechanism limits scalabili
      - **Attention matrix fidelity**: Mean squared error (MSE) $\le 1e-4$ between original and optimized attention probabilities.  
      - **Gradient similarity**: Cosine similarity $\ge 0.95$ between gradients of original and optimized attention layers during backward pass.  
 
-3. **Throughput Improvement**:  
-   - **Target**: $\ge 5\%$ increase in tokens processed per second (TPS) under FP16/AMP.  
-   - Measurement:  
-     - Profile **end-to-end throughput** (preprocessing + forward/backward passes) on A100 GPUs using `torch.profiler`.  
-     - Compare optimized vs. baseline for sequence lengths 512–4096.  
-
 4. **Memory Efficiency**:  
    - **Peak memory reduction**: $\ge 30\%$ for sequences $\ge 1024$ tokens.  
    - Measurement:  
@@ -48,11 +182,11 @@ Transformers underpin modern NLP, but their attention mechanism limits scalabili
    - **FLOPs reduction**: Achieve empirical complexity closer to $O(n \text{ log } n)` than $O(n^2)$.  
    - Validation:  
      - Fit FLOPs vs. sequence length curve (for `n=256` to `n=4096`) to confirm scaling behavior.  
-     - Use PyTorch’s `torch.profiler.profile()` to isolate attention FLOPs.  
+     - Use PyTorch's `torch.profiler.profile()` to isolate attention FLOPs.  
 
 ### Validation Workflow  
 1. **Pretrained Model Compatibility**:  
-   - Load weights from baseline models (e.g., HuggingFace’s `bert-base-uncased`), replace *only* the attention module, and evaluate **without fine-tuning**.  
+   - Load weights from baseline models (e.g., HuggingFace's `bert-base-uncased`), replace *only* the attention module, and evaluate **without fine-tuning**.  
    - Ensures optimization does not rely on retraining to "recover" lost accuracy.  
 
 2. **Stress Testing**:  
@@ -81,110 +215,3 @@ Transformers underpin modern NLP, but their attention mechanism limits scalabili
 - Accuracy degradation from over-sparsification.
 - Kernel fusion failures in PyTorch leading to slower execution.
 - Numerical instability in low-precision/high-scale scenarios.
-
----
-
-## Technical Approach
-
-**Mathematical Formulation**  
-Let ` Q, K, V \in \mathbb{R}^{n \times d} `. Standard attention computes:  
-\[
-\text{Attention}(Q,K,V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right)V
-\]  
-We reformulate this with a **rank-` k ` approximation** (` k \ll n `):  
-\[
-QK^T \approx (Q\Phi)(K\Phi)^T, \quad \Phi \in \mathbb{R}^{d \times k} \text{ (learnable)}
-\]  
-Subject to \( ||\text{Attention}_{\text{original}} - \text{Attention}_{\text{approx}}||_F \leq \delta \).
-
-**Algorithm Choice**
-
-- **Linformer-style projection**: Low-rank factorization via learned projections.
-- **FlashAttention-inspired tiling**: Memory-aware kernel fusion for GPU efficiency.
-- **Gradient checkpointing**: Trade compute for memory in backward pass.
-
-_Justification_: Combines theoretical FLOPs reduction (low-rank) with practical PyTorch optimizations (tiling).
-
-**PyTorch Implementation**
-
-1. Custom `nn.Module` with fused CUDA kernels for projection + softmax.
-2. Use `torch.utils.checkpoint` for memory reduction.
-3. Profile with PyTorch Profiler and `memory_stats()` API.
-
-**Validation**
-
-- **Numerical**: Mean squared error (MSE) of attention matrices.
-- **Task performance**: Fine-tuning BERT-base on GLUE.
-- **Speed/memory**: Benchmark against `xformers` library.
-
-**Resource Requirements**
-
-- GPU: A100 (40GB) for sequence length ≥4096.
-- Dataset storage: 500GB (Wikitext + PG19).
-- Constraints: PyTorch 2.0+; no Triton dependencies.
-
----
-
-## Initial Results
-
-**Implementation Validity**  
-- **Synthetic test**: For \( n=1024, d=64 \), MSE between original and low-rank attention: \( 2.1 \times 10^{-4} \).  
-- **Gradient flow**: Backward pass succeeds with `torch.autograd.gradcheck`.
-
-**Performance Metrics**  
-| Metric | Baseline (vanilla) | Optimized | Change |
-|----------------------|--------------------|-----------|---------|
-| Memory (n=2048) | 12.1 GB | 7.8 GB | -35.5% |
-| Forward time (ms) | 142 ± 4 | 118 ± 3 | -16.9% |
-| WikiText perplexity | 22.3 | 23.1 | +3.6% |
-
-**Test Cases**
-
-- **n=512**: No accuracy drop on SST-2 (91.2% vs 91.5%).
-- **n=4096**: 27% memory reduction, but 9% slower due to kernel overhead.
-
-**Limitations**  
-- Projection matrix ` \Phi ` increases parameter count by 0.4%.  
-- Non-determinism in fused kernels (CUDA graph incompatibility).  
-- 5–8% perplexity increase on PG19 (long-context).
-
-**Resource Usage**
-
-- GPU memory variance: ±0.3 GB across runs (PyTorch fragmentation).
-- CPU RAM: 18 GB (data loading bottleneck).
-
-**Unexpected Challenges**
-
-- PyTorch’s `torch.jit.script` failed to optimize fused kernels.
-- FP16 instability in projection gradients required manual scaling.
-
----
-
-## Next Steps
-
-**Immediate Improvements**  
-- Replace learned ` \Phi ` with Performer-style orthogonal random features.  
-- Adopt `torch.compile` for kernel fusion without custom CUDA.  
-- Mixed-precision training (AMP) for memory reduction.
-
-**Technical Challenges**  
-- Dynamic sequence length support (variable ` n `).  
-- Reducing MSE in attention probabilities without increasing rank ` k `.  
-- Distillation from vanilla attention as regularization.
-
-**Questions for Collaborators**  
-- How to balance kernel fusion vs PyTorch compiler limitations?  
-- Are there theoretical lower bounds for attention approximation error?  
-- Optimal projection rank \( k \) for n=8192?
-
-**Alternative Approaches**
-
-- **Block-sparse attention**: Hybrid of local/windowed + global.
-- **Recurrent memory**: Compress KV cache into fixed-size state.
-- **Quantization**: 4-bit KV cache with adaptive scaling.
-
-**Lessons Learned**
-
-- PyTorch’s memory profiler is critical for attention optimization.
-- Low-rank methods need careful initialization (Xavier + orthogonal).
-- Kernel implementation can dominate theoretical FLOPs benefits.
