@@ -106,7 +106,7 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 So far, we have done a **toy demonstration** on a small synthetic dataset plus a few samples from WikiText-2 using a GPT-2–style model. Specifically, we:
 
--   Replaced full self-attention with a **fixed "last-10-tokens"** window, rather than a learned sparse mask.
+-   Replaced full self-attention with a **fixed "last-5-tokens"** window, rather than a learned sparse mask.
 -   Froze most GPT-2 parameters, except for our custom attention block and some MLP layers.
 -   Trained by minimizing KL-divergence between the custom model's outputs and the reference GPT-2 on short snippets of text.
 
