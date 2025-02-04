@@ -106,7 +106,7 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 So far, we have done a **toy demonstration** on a small synthetic dataset plus a few samples from WikiText-2 using a GPT-2–style model. Specifically, we:
 
--   Replaced full self-attention with a **fixed "last-5-tokens"** window, rather than a learned sparse mask.
+-   Replaced full self-attention with a **fixed "last-10-tokens"** window, rather than a learned sparse mask.
 -   Froze most GPT-2 parameters, except for our custom attention block and some MLP layers.
 -   Trained by minimizing KL-divergence between the custom model's outputs and the reference GPT-2 on short snippets of text.
 
@@ -121,7 +121,7 @@ In the future, we intend to extend this approach to **learn** which tokens are m
 ### Evidence your implementation works
 
 -   **Successful Training Loop**: Over 100 epochs, the KL-divergence–based loss steadily decreased from about 1.61 down to near 0.07 on our toy data, indicating the custom attention can mimic the reference model's distributions.
--   **Text Generation**: We tested with a few prompts, observing that our custom model produced text in a style similar to GPT-2, though often less coherent due to the limited "last-5-tokens" context.
+-   **Text Generation**: We tested with a few prompts, observing that our custom model produced text in a style similar to GPT-2, though often less coherent due to the limited "last-10-tokens" context.
 
 ### Basic performance metrics
 
@@ -165,7 +165,7 @@ Below are selected generation samples using the same prompts for both the refere
 
 ### Unexpected challenges
 
--   **Limited Coherence**: Attending to only 5 previous tokens degrades text coherence. We will need more sophisticated masking to handle longer contexts properly.
+-   **Limited Coherence**: Attending to only 10 previous tokens degrades text coherence. We will need more sophisticated masking to handle longer contexts properly.
 -   **Overfitting**: Because our dataset was tiny, we saw the model quickly saturate or jump around in text quality, suggesting the need for better regularization.
 -   **Accuracy Concerns**: Potential accuracy degradation from over-sparsification.
 
@@ -175,7 +175,7 @@ Below are selected generation samples using the same prompts for both the refere
 
 ### Immediate improvements needed
 
--   **Implement Adaptive Mask Learning**: Replace the fixed "last-5-tokens" approach with a truly learnable attention pattern that selects crucial tokens.
+-   **Implement Adaptive Mask Learning**: Replace the fixed "last-10-tokens" approach with a truly learnable attention pattern that selects crucial tokens.
 -   **Extend Training Data**: Use the full WikiText-2 dataset (rather than just snippets) to get more realistic coverage and reduce overfitting.
 -   **Fine-Tune Hyperparameters**: Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
 
