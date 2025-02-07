@@ -1,6 +1,10 @@
 ---
 marp: true
 theme: gaia
+style: |
+  pre code {
+    font-size: 0.5rem;
+  }
 ---
 
 # Optimizing Attention Mechanisms in Transformers
@@ -17,52 +21,84 @@ Chandler Cheung, Charis Gao, Jordan Hochman
 - In recent years, size of models has grown exponentially
 - Key challenge: $O(n^2)$ complexity in attention mechanism
 - Growing model sizes create memory constraints
-- Need for more efficient attention mechanism without losing performance
+- Need more efficient attention mechanism without degrading performance
 
 ---
 
 ## Optimization Problem
 
-Develop a customizable attention mask that learns which tokens in the sequence to focus on (instead of attending to all tokens). We plan to train this model with an attention mask to produce outputs similar to a baseline, unmodified Transformer, specifically aiming to preserve model quality while reducing computational cost.
+- Develop customizable attention mask that learns important tokens in sequence instead of attending to all tokens
+- Train model with optimized attention mask to produce outputs similar to a baseline, unmodified transformer
+- Preserve model quality while reducing computational cost
 
 ---
 
 ## Mathematical Formulation
 
 Core objective: minimize KL-divergence between baseline and custom model
-$$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} ,|, P_{\text{custom}}\bigr)$$
+$$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} \,\|\, P_{\text{custom}}\bigr)$$
 
 #### Success Metrics
 
 - Accuracy retention: comparable performance
-- Computational improvement: reduced memory usage or speed gains
+- Computational improvement: reduced memory and speed gains
 - Distribution alignment: low KL-divergence
 
 ---
 
 ## Current Implementation
 
-- Baseline Model: GPT-2 b/c of unoptimized attention mechanism
-- Custom Attention Module: replaced the default full attention with a fixed "last-10-tokens" window with learnable parameters dictating weights for tokens
+- Baseline Model: GPT-2 (unoptimized attention mechanism)
+- Custom Attention Module: fixed "last-10-tokens" window 
+    - Learnable parameters dictating weights for tokens
 
-![height: 100 left:50%](./docs/figures/forward_attention.png)
+``` python
+def forward(self, hidden_states, attention_mask=None, **kwargs):
+    ...
+    # Create sliding window attention mask
+    full_mask = torch.full(
+        (batch_size, self.num_heads, seq_length, seq_length),
+        float('-inf'),
+        device=hidden_states.device
+    )
+    for i in range(seq_length):
+        start_idx = max(0, i - self.window_size)
+        full_mask[:, :, i, start_idx:i+1] = 0
+    ... 
+    return self.out_proj(context)
+```
 
 ---
 
 ## Current Implementation
 
-- Loss Computation: Compute logits from both models on the same input batch, then apply KL-divergence, trained to minimize this divergence
+- Loss Computation
+    - Compute logits from both models on the same input batch
+    - Calculate KL-divergence and minimize
 
-![](./docs/figures/kl_divergence_loss.png)
+``` python
+def kl_divergence_loss(logits_custom, logits_ref, mask):
+    assert logits_custom.shape == logits_ref.shape, \
+        f"Shape mismatch: {logits_custom.shape} vs {logits_ref.shape}"
 
-In the future, will extend approach to learn which tokens matter most and measure memory usage
+    log_probs_custom = F.log_softmax(logits_custom, dim=-1)
+    probs_ref = F.softmax(logits_ref.detach(), dim=-1)  # Detach reference model
+
+    # Calculate per-token KL
+    kl = (probs_ref * (probs_ref.log() - log_probs_custom)).sum(-1)
+
+    # Apply padding mask and average
+    active_tokens = mask.sum()
+    return (kl * mask).sum() / active_tokens
+```
 
 ---
 
 ## Initial Results - Training Progress
 
-- Over 100 epochs, the KL-divergence–based loss decreased from 1.61 down to 0.07 on our toy data, indicating the custom attention can mimic the reference model's distributions
-- We tested with a few prompts, observing that our custom model produced text in a style similar to GPT-2, though often less coherent due to the limited "last-10-tokens" context
+- Over 100 epochs, loss (KL-divergence) decreased from 1.61 to 0.07 on sample data
+    - Custom attention can mimic the reference model's distributions
+- Tested with a few prompts, resulting in output text mimicing style similar to GPT-2, though often less coherent due to the limited "last-10-tokens" context
 
 ---
 
@@ -82,21 +118,26 @@ Reference: ... matter's consciousness. True, you can stop ...
 Custom: ... a newbies for what, welcome as an earthquake ...
 ```
 
-Custom model's outputs sometimes drift or become less coherent, but still roughly follow the prompts and produce recognizable English words --> model captures some of GPT-2's distribution
+- Custom model's outputs sometimes drift or become less coherent
+- Roughly follows prompts and produce recognizable English words
+- Custom Model captures some of GPT-2's output token distribution
 
 ---
 
 ## Current Limitations
 
-- No dynamic mask optimization yet (using fixed "last-10-tokens" window)
-- Need to train on a larger dataset (currently using small synthetic dataset)
+- No dynamic mask optimization
+    - Currently used fixed "last-10-tokens" window
+- Need to train on larger dataset
+    - Currently used small synthetic dataset
 - No measure of memory or speed usage
 
 ---
 
 ## Next Steps
 
-- Implement adaptive mask learning
+- Implement adaptive mask learning to identify important tokens
+- Measure memory usage and speed improvements
 - Extend to full WikiText-2 dataset / more training data
 - Optimize hyperparameters
 
