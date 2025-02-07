@@ -48,11 +48,11 @@ $$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} \,\|\, P_{\text{custom}}\bigr)$
 
 ## Current Implementation
 
-- Baseline Model: GPT-2 (unoptimized attention mechanism)
-- Custom Attention Module: fixed "last-10-tokens" window 
-    - Learnable parameters dictating weights for tokens
+- Baseline model: GPT-2 (unoptimized attention mechanism)
+- Custom attention module: fixed "last-10-tokens" window
+  - Learnable parameters dictating weights for tokens
 
-``` python
+```python
 def forward(self, hidden_states, attention_mask=None, **kwargs):
     ...
     # Create sliding window attention mask
@@ -64,7 +64,7 @@ def forward(self, hidden_states, attention_mask=None, **kwargs):
     for i in range(seq_length):
         start_idx = max(0, i - self.window_size)
         full_mask[:, :, i, start_idx:i+1] = 0
-    ... 
+    ...
     return self.out_proj(context)
 ```
 
@@ -73,10 +73,10 @@ def forward(self, hidden_states, attention_mask=None, **kwargs):
 ## Current Implementation
 
 - Loss Computation
-    - Compute logits from both models on the same input batch
-    - Calculate KL-divergence and minimize
+  - Compute logits from both models on the same input batch
+  - Calculate KL-divergence and minimize
 
-``` python
+```python
 def kl_divergence_loss(logits_custom, logits_ref, mask):
     assert logits_custom.shape == logits_ref.shape, \
         f"Shape mismatch: {logits_custom.shape} vs {logits_ref.shape}"
@@ -97,7 +97,7 @@ def kl_divergence_loss(logits_custom, logits_ref, mask):
 ## Initial Results - Training Progress
 
 - Over 100 epochs, loss (KL-divergence) decreased from 1.61 to 0.07 on sample data
-    - Custom attention can mimic the reference model's distributions
+  - Custom attention can mimic the reference model's distributions
 - Tested with a few prompts, resulting in output text mimicing style similar to GPT-2, though often less coherent due to the limited "last-10-tokens" context
 
 ---
@@ -120,16 +120,16 @@ Custom: ... a newbies for what, welcome as an earthquake ...
 
 - Custom model's outputs sometimes drift or become less coherent
 - Roughly follows prompts and produce recognizable English words
-- Custom Model captures some of GPT-2's output token distribution
+- Custom model captures some of GPT-2's output token distribution
 
 ---
 
 ## Current Limitations
 
 - No dynamic mask optimization
-    - Currently used fixed "last-10-tokens" window
+  - Currently using fixed "last-10-tokens" window
 - Need to train on larger dataset
-    - Currently used small synthetic dataset
+  - Currently using small synthetic dataset
 - No measure of memory or speed usage
 
 ---
