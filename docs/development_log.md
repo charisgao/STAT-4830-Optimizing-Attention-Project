@@ -25,3 +25,21 @@ Our proof-of-life plan involved a scaled-down experiment on CIFAR-10 to validate
 We presented our idea to Prof. Davis and he expressed concerns that a basic architecture might already work pretty well and there could be no further optimization steps. Also, there are no downstream objectives beyond predictive accuracy and working within hardware constraints.
 
 After further discussion, we pivoted to optimizing the attention mechanisms in transformer models. We will work with a pretrained transformer model and our goal will be to approximate it as well as possible (maintaining downstream performance) while making the attention mechanism cheaper to compute. We plan to start with having fixed attention masks and having the model dynamically optimize a linear combination weighting (which attention components are more important). Potential stretch goals involve the model learning the best attention patterns (without attention masks).
+
+### Last-10-Tokens Implementation
+
+We coded a toy implementation that replaced the full self-attention layer of GPT-2 with a fixed last-10-tokens window, and froze most GPT-2 parameters except for our custom attention block and some MLP layers. We trained by minimizing KL-divergence between the custom model's outputs and the reference GPT-2 outputs. The purpose of this implementation was for a proof of concept and to ensure we were actually able to change the attention layer.
+
+## Week 4
+
+### 2/4 Meeting with Prof. Davis
+
+We presented our progress and demonstrated our proof of concept implementation with Prof. Davis. We also outlined next steps, which focus on training and optimizing weights for a linear combination of attention masks. To improve efficiency, we plan to explore various penalties, including L1 regularization, which could help drive some coefficients to zero.
+
+Prof. Davis provided valuable feedback and suggested two key approaches to enhance our work. First, he recommended incorporating a regularizer or constraint to find low-rank masks, which could improve computational efficiency. Second, he proposed optimizing over different types of matrix families, particularly highlighting sliding windows. He also noted that circulant matrices are cheap to store (only need one vector), which could help improve memory issues.
+
+## Week 5
+
+### Learnable Attention Masks
+
+TODO
