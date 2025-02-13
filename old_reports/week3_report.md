@@ -90,7 +90,6 @@ summed over all training examples $X$. This objective encourages the custom atte
 - **Validation Loss**: Track KL-divergence on a held-out set to ensure the custom model matches the baseline distribution over time.
   - Load weights from baseline models (e.g., HuggingFace's `bert-base-uncased`), replace _only_ the attention module, and evaluate **without fine-tuning**.
   - Ensures optimization does not rely on retraining to "recover" lost accuracy.
-  - L1 penalty for coefficients of attention masks
 - **Perplexity/Accuracy**: Evaluate on standard tasks (e.g., language modeling or classification) to ensure minimal drop in performance.
 - **Edge cases**: Sequences with extreme sparsity (e.g., all padding tokens) or high similarity (e.g., repeated tokens).
 - **Scalability Tests**: Gradually increase input sequence lengths and measure memory usage, throughput, and any speed improvements.
@@ -107,13 +106,13 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 In our previous toy demonstration, we replaced the full self-attention with a fixed last-10-tokens window. This was a proof of concept example for us to see that we could indeed set up a framework to minimize the KL-divergence between two models.
 
-Now, we have implemented a **custom attention layer** that replaces the fixed window with **learnable position-specific attention patterns**. Each position in the sequence has its own attention mask that can be optimized during training, allowing the model to learn which tokens are most important for each position rather than using a predetermined pattern. We use a weighted linear combination of these attention masks, where the coefficients are tunable parameters. This approach maintains the expressiveness of full attention while providing the potential for optimization through learned sparsity patterns. The attention masks are initialized with a **decaying pattern** that gives more weight to nearby tokens, but these weights can be adjusted during training to capture both local and long-range dependencies as needed. We similarly trained by minimizing KL-divergence between the custom model's outputs and the reference GPT-2. By learning these position-specific patterns, we aim to discover natural sparsity in the attention mechanism that could lead to computational efficiency improvements while preserving model performance.
-
-Additionally, we included a L1 penalty when optimizing the coefficients of the attention masks so that they are not extremely large, and so that we cna interpret which attention masks are significant.
+Now, we have implemented a **custom attention layer** that replaces the fixed window with **learnable position-specific attention patterns**. Each position in the sequence has its own attention mask that can be optimized during training, allowing the model to learn which tokens are most important for each position rather than using a predetermined pattern. This approach maintains the expressiveness of full attention while providing the potential for optimization through learned sparsity patterns. The attention masks are initialized with a **decaying pattern** that gives more weight to nearby tokens, but these weights can be adjusted during training to capture both local and long-range dependencies as needed. We similarly trained by minimizing KL-divergence between the custom model's outputs and the reference GPT-2. By learning these position-specific patterns, we aim to discover natural sparsity in the attention mechanism that could lead to computational efficiency improvements while preserving model performance.
 
 Currently, the complexity is still $O(n^2)$ in the forward pass, but the learned patterns could potentially be sparse or low-rank, allowing for optimizations. In the future, we intend to extend this approach to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization (eg. L1 to encourage sparsity), penalty, and/or constraints (eg. low rank using SVD) to reduce complexity.
 
 **Key Observations**
+
+TODO EDIT THIS
 
 - The code runs end-to-end without errors, and the custom attention layer can learn to partially mimic the baseline's next-token predictions.
 - KL-divergence decreases steadily, confirming that the custom model is aligning its output distribution to GPT-2's.
@@ -121,70 +120,58 @@ Currently, the complexity is still $O(n^2)$ in the forward pass, but the learned
 
 ### Evidence your implementation works
 
-- **Successful Training Loop:** Over 100 epochs, the KL-divergence–based loss with L1 penalty steadily decreased from about 2.1470 down to 0.3881 on our  dataset, indicating the custom attention can mimic the reference model's distributions.
-- **Text Generation:** We tested with a few prompts, observing that our custom model produced text in a style similar to GPT-2. The text is not as coherent as the reference model, but it is better than the "last-10-tokens" mask that we used previously.
-- **Convergence of Attention Masks Coefficients:** Below are graphs of the values of the coefficients of the attention masks for the linear combination of them for specific attention blocks.
+TODO EDIT THIS
 
-![Attention Block 0](./figures/week5_report_attention_block0.png)
-![Attention Block 4](./figures/week5_report_attention_block4.png)
-![Attention Block 8](./figures/week5_report_attention_block8.png)
-![Attention Block 11](./figures/week5_report_attention_block11.png)
-*Figure: Evolution of attention mask coefficients during training. Each line represents a coefficient for a different attention pattern. The convergence of these values suggests the model is learning stable attention patterns.*
-
+- **Successful Training Loop**: Over 100 epochs, the KL-divergence–based loss steadily decreased from about 1.61 down to near 0.07 on our toy data, indicating the custom attention can mimic the reference model's distributions.
+- **Text Generation**: We tested with a few prompts, observing that our custom model produced text in a style similar to GPT-2, though often less coherent due to the limited "last-10-tokens" context.
 
 ### Basic performance metrics
 
-Here are the loss values (KL-divergence + L1 penalty) across epochs (only partial data shown):
+TODO EDIT THIS
+
+Here are the loss values (KL-divergence) across epochs (only partial data shown):
 
 ```
-Epoch 1 | Loss: 2.1470...
-Epoch 20 | Loss: 0.6415...
-Epoch 40 | Loss: 0.4850 ...
-Epoch 60 | Loss: 0.4302 ...
-Epoch 80 | Loss: 0.3913 ...
-Epoch 100 | Loss: 0.3881
+Epoch 1 | Loss: 1.6116...
+Epoch 20 | Loss: 0.2843...
+Epoch 40 | Loss: 0.1558 ...
+Epoch 60 | Loss: 0.1164 ...
+Epoch 80 | Loss: 0.0874 ...
+Epoch 100 | Loss: 0.0780
 ```
 
 The consistent downward trend demonstrates that the custom attention mechanism aligns progressively better with the baseline.
 
 ### Test case results
 
+TODO EDIT THIS
+
 Below are selected generation samples using the same prompts for both the reference and custom models. While the custom model's outputs sometimes drift or become less coherent, they still roughly follow the prompts and produce recognizable English words. This shows the model is capturing some of GPT-2's distribution, though it's obviously not perfect.
 
 **Prompt**: Hello, my name is
 
-- **Reference**: ... Aaron. It took just weeks of work to get this script working and I was so excited right when it started getting released ...
-- **Custom**: ... in German; "Wulf," which means a new kind of word ...
+- **Reference**: ... I am the founder of Inoscular Robotics ...
+- **Custom**: ... I have you doing so much easier than ever ...
 
 **Prompt**: The meaning of life is
 
-- **Reference**: ... different when it comes to death. It involves the beginning and end, but also time itself ...
-- **Custom**: ... not a question, however many people are involved in this matter ...
-
-**Prompt**: In a shocking turn of events,
-
-- **Reference**: ... this week the FBI has released more emails that show Hillary Clinton had some sort her private email server ...
-- **Custom**: ... it was that the British government would soon adopt an anti-government measure aimed at this time ...
-
-**Prompt**: The future of artificial intelligence
-
-- **Reference**: ... and its implications for human life is now in doubt, experts say. And much worry has been raised over the development by some tech giants who believe that AI may alter our minds ...
-- **Custom**: ... to the public. That means that all human beings are not, from one single individuals; but they could be seen in different locations on our planet's surface and around them — at high altitudes ...
+- **Reference**: ... matter's consciousness. True, you can stop ...
+- **Custom**: ... a newbies for what, welcome as an earthquake ...
 
 ### Current Limitations
 
 - **Minimal Dataset**: Synthetic or small text corpora, offering limited insight into real-world performance.
-- **Limited Mask Optimization**: We used a simple weighted linear combination of attention masks that attend to tokens in specific positions.
+- **No Actual Mask Optimization**: We used a fixed window, so there's no dynamic or learned mechanism yet.
 - **No Large Model**: GPT-2 was used purely for demonstration; we have not tested on bigger or more modern architectures.
 
 ### Resource Usage Measurements
 
-- On one T4 GPU on Google Colab, this took a while to run for 100 epochs.
+- On one T4 GPU on Google Colab, this ran very quickly with just the toy model.
 - These resource measurements are modest because our demonstration used a restricted sequence length and a small amount of data.
 
 ### Unexpected challenges
 
-- **Limited Coherence**: We will need more sophisticated masking to handle longer contexts properly.
+- **Limited Coherence**: Attending to only 10 previous tokens degrades text coherence. We will need more sophisticated masking to handle longer contexts properly.
 - **Overfitting**: Because our dataset was tiny, we saw the model quickly saturate or jump around in text quality, suggesting the need for better regularization.
 - **Accuracy Concerns**: Potential accuracy degradation from over-sparsification.
 
@@ -194,9 +181,8 @@ Below are selected generation samples using the same prompts for both the refere
 
 ### Immediate improvements needed
 
-- **Extend Training Data:** Use the full WikiText-2 dataset (rather than just snippets) to get more realistic coverage and reduce overfitting.
-- **Fine-Tune Hyperparameters:** Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
-- **Efficiency and Memory Improvement:** Track speed and memory usage of attention masks.
+- **Extend Training Data**: Use the full WikiText-2 dataset (rather than just snippets) to get more realistic coverage and reduce overfitting.
+- **Fine-Tune Hyperparameters**: Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
 
 ### Technical Challenges to Address
 
