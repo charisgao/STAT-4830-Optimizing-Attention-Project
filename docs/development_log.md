@@ -40,6 +40,6 @@ Prof. Davis provided valuable feedback and suggested two key approaches to enhan
 
 ## Week 5
 
-### Learnable Attention Masks
+### Weighted Combination of Attention Masks
 
-TODO
+As a next step, we replaced the fixed last-10-tokens window with a learnable weighted linear combination of three candidate masks: candidate 0 only attends to the last 5 tokens, candidate 1 only attends to the last 10 tokens, and candidate 2 only attends to the first 5 tokens. We also added a L1 penalty when optimizing the coefficients and similarly trained to minimize the KL-divergence between the custom model's outputs and reference model. Our next step will be including more candidate masks in the linera combination and experimenting with different types of masks beyond first _ or last _ tokens.

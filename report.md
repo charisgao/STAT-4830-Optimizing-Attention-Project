@@ -111,7 +111,7 @@ Now, we have implemented a **custom attention layer** that replaces the fixed wi
 
 Additionally, we included a L1 penalty when optimizing the coefficients of the attention masks so that they are not extremely large, and so that we can interpret which attention masks are significant.
 
-Currently, the complexity is still $O(n^2)$ in the forward pass, but the learned patterns could potentially be sparse or low-rank, allowing for optimizations. In the future, we intend to extend this approach to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization (eg. L1 to encourage sparsity), penalty, and/or constraints (eg. low rank using SVD) to reduce complexity.
+In the future, we intend to extend this approach to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization, penalty, and/or constraints (eg. low rank using SVD) to reduce complexity.
 
 **Key Observations**
 
@@ -172,7 +172,7 @@ Below are selected generation samples using the same prompts for both the refere
 
 ### Current Limitations
 
-- **Minimal Dataset**: Synthetic or small text corpora, offering limited insight into real-world performance.
+- **Minimal Dataset**: Synthetic or small text corpora, offering limited insight into real-world performance (we only use 1000 training samples).
 - **Limited Mask Optimization**: We used a simple weighted linear combination of attention masks that attend to tokens in specific positions.
 - **No Large Model**: GPT-2 was used purely for demonstration; we have not tested on bigger or more modern architectures.
 
@@ -193,7 +193,7 @@ Below are selected generation samples using the same prompts for both the refere
 
 ### Immediate improvements needed
 
-- **Extend Training Data:** Use the full WikiText-2 dataset (rather than just snippets) to get more realistic coverage and reduce overfitting.
+- **Extend Training Data:** Use the full WikiText-2 dataset (rather than just 1000 samples) to get more realistic coverage and reduce overfitting.
 - **Fine-Tune Hyperparameters:** Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
 - **Efficiency and Memory Improvement:** Track speed and memory usage of attention masks.
 
