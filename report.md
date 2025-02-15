@@ -107,9 +107,9 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 In our previous toy demonstration, we replaced the full self-attention with a fixed last-10-tokens window. This was a proof of concept example for us to see that we could indeed set up a framework to minimize the KL-divergence between two models.
 
-Now, we have implemented a **custom attention layer** that replaces the fixed window with **learnable position-specific attention patterns**. Each position in the sequence has its own attention mask that can be optimized during training, allowing the model to learn which tokens are most important for each position rather than using a predetermined pattern. We use a weighted linear combination of these attention masks, where the coefficients are tunable parameters. This approach maintains the expressiveness of full attention while providing the potential for optimization through learned sparsity patterns. The attention masks are initialized with a **decaying pattern** that gives more weight to nearby tokens, but these weights can be adjusted during training to capture both local and long-range dependencies as needed. We similarly trained by minimizing KL-divergence between the custom model's outputs and the reference GPT-2. By learning these position-specific patterns, we aim to discover natural sparsity in the attention mechanism that could lead to computational efficiency improvements while preserving model performance.
+Now, we have implemented a **custom attention layer** that replaces the fixed window with **learnable position-specific attention patterns**. Each position in the sequence has its own attention mask that can be optimized during training, allowing the model to learn which tokens are most important for each position rather than using a predetermined pattern. We consider a linear combination of three candidate masks: candidate 0 only attends to the last 5 tokens, candidate 1 only attends to the last 10 tokens, and candidate 2 only attends to the first 5 tokens. We use a weighted linear combination of these attention masks, where the coefficients are tunable parameters. This approach maintains the expressiveness of full attention while providing the potential for optimization through learned sparsity patterns. We similarly trained by minimizing KL-divergence between the custom model's outputs and the reference GPT-2. By learning these position-specific patterns, we aim to discover natural sparsity in the attention mechanism that could lead to computational efficiency improvements while preserving model performance.
 
-Additionally, we included a L1 penalty when optimizing the coefficients of the attention masks so that they are not extremely large, and so that we cna interpret which attention masks are significant.
+Additionally, we included a L1 penalty when optimizing the coefficients of the attention masks so that they are not extremely large, and so that we can interpret which attention masks are significant.
 
 Currently, the complexity is still $O(n^2)$ in the forward pass, but the learned patterns could potentially be sparse or low-rank, allowing for optimizations. In the future, we intend to extend this approach to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization (eg. L1 to encourage sparsity), penalty, and/or constraints (eg. low rank using SVD) to reduce complexity.
 
@@ -121,7 +121,7 @@ Currently, the complexity is still $O(n^2)$ in the forward pass, but the learned
 
 ### Evidence your implementation works
 
-- **Successful Training Loop:** Over 100 epochs, the KL-divergence–based loss with L1 penalty steadily decreased from about 2.1470 down to 0.3881 on our  dataset, indicating the custom attention can mimic the reference model's distributions.
+- **Successful Training Loop:** Over 100 epochs, the KL-divergence–based loss with L1 penalty steadily decreased from about 2.1470 down to 0.3881 on our dataset, indicating the custom attention can mimic the reference model's distributions.
 - **Text Generation:** We tested with a few prompts, observing that our custom model produced text in a style similar to GPT-2. The text is not as coherent as the reference model, but it is better than the "last-10-tokens" mask that we used previously.
 - **Convergence of Attention Masks Coefficients:** Below are graphs of the values of the coefficients of the attention masks for the linear combination of them for specific attention blocks.
 
@@ -129,8 +129,7 @@ Currently, the complexity is still $O(n^2)$ in the forward pass, but the learned
 ![Attention Block 4](./figures/week5_report_attention_block4.png)
 ![Attention Block 8](./figures/week5_report_attention_block8.png)
 ![Attention Block 11](./figures/week5_report_attention_block11.png)
-*Figure: Evolution of attention mask coefficients during training. Each line represents a coefficient for a different attention pattern. The convergence of these values suggests the model is learning stable attention patterns.*
-
+_Figure: Evolution of attention mask coefficients during training. Each line represents a coefficient for a different attention pattern. The convergence of these values suggests the model is learning stable attention patterns._
 
 ### Basic performance metrics
 
