@@ -9,7 +9,7 @@ style: |
 
 # Optimizing Attention Mechanisms in Transformers
 
-#### Week 4: Project Overview & Initial Results
+#### Week 6: Project Overview & Results
 
 Chandler Cheung, Charis Gao, Jordan Hochman
 
@@ -27,7 +27,7 @@ Chandler Cheung, Charis Gao, Jordan Hochman
 
 ## Optimization Problem
 
-- Develop customizable attention mask that learns important tokens in sequence instead of attending to all tokens
+- Develop customizable attention mask that learns important tokens in sequence to attend to instead of attending to all tokens
 - Train model with optimized attention mask to produce outputs similar to a baseline, unmodified transformer
 - Preserve model quality while reducing computational cost
 
@@ -49,23 +49,18 @@ $$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} \,\|\, P_{\text{custom}}\bigr)$
 ## Current Implementation
 
 - Baseline model: GPT-2 (unoptimized attention mechanism)
-- Custom attention module: fixed "last-10-tokens" window
-  - Learnable parameters dictating weights for tokens
+- Custom attention module: linear combination of three candidate masks: last 5 tokens, last 10 tokens, and first 5 tokens
+  - Learnable weight parameters w/ L1 penalty (independent for each transformer block/layer), rather than fixed sliding window
 
 ```python
 def forward(self, hidden_states, attention_mask=None, **kwargs):
     ...
-    # Create sliding window attention mask
-    full_mask = torch.full(
-        (batch_size, self.num_heads, seq_length, seq_length),
-        float('-inf'),
-        device=hidden_states.device
-    )
-    for i in range(seq_length):
-        start_idx = max(0, i - self.window_size)
-        full_mask[:, :, i, start_idx:i+1] = 0
+    candidate_masks = self._get_candidate_masks(seq_length, device=device)
     ...
-    return self.out_proj(context)
+    w = torch.sigmoid(self.alpha)
+    ...
+    final_mask = torch.sum(w * candidate_masks, dim=2)
+    ...
 ```
 
 ---
@@ -94,52 +89,65 @@ def kl_divergence_loss(logits_custom, logits_ref, mask):
 
 ---
 
-## Initial Results - Training Progress
+## Current Results - Training Progress
 
-- Over 100 epochs, loss (KL-divergence) decreased from 1.61 to 0.07 on sample data
+- Over 100 epochs, loss (KL-divergence) decreased from 2.1470 to 0.3881 on our dataset
   - Custom attention can mimic the reference model's distributions
-- Tested with a few prompts, resulting in output text mimicing style similar to GPT-2, though often less coherent due to the limited "last-10-tokens" context
+  - Model successfully learns sparse attention pattern
+- Tested with a few prompts, resulting in output text mimicing style similar to GPT-2, though often less coherent due to the limited context
+  - Weights for linear combination are specific to each transformer block, but shared across all positions/sequences/heads within that block
 
 ---
 
-## Initial Results - Sample Outputs
+## Current Results - Attention Masks Coefficients Convergence
+
+![width:330px height:231px](./figures/week5_report_attention_block1.png) ![width:330px height:231px](./figures/week5_report_attention_block4.png) ![width:330px height:231px](./figures/week5_report_attention_block8.png)
+
+Graphs of evolution of attention mask coefficients during training. Each line represents a coefficient in the attention block. The convergence of these values suggests the model is learning stable attention patterns.
+
+---
+
+## Current Results - Sample Outputs
 
 ```
 Prompt: Hello, my name is
 
-Reference: ... I am the founder of Inoscular Robotics ...
-Custom: ... I have you doing so much easier than ever ...
+Reference: Aaron. It took just weeks of work to get this script ...
+Custom: in German; "Wulf," which means a new kind of word ...
 ```
 
 ```
 Prompt: The meaning of life is
 
-Reference: ... matter's consciousness. True, you can stop ...
-Custom: ... a newbies for what, welcome as an earthquake ...
+Reference: different when it comes to death. It involves the beginning and end ...
+Custom: not a question, however many people are involved in this matter ...
 ```
 
 - Custom model's outputs sometimes drift or become less coherent
-- Roughly follows prompts and produce recognizable English words
+- Follows prompts and produce recognizable English words
 - Custom model captures some of GPT-2's output token distribution
 
 ---
 
 ## Current Limitations
 
-- No dynamic mask optimization
-  - Currently using fixed "last-10-tokens" window
-- Need to train on larger dataset
-  - Currently using small synthetic dataset
+- Limited mask optimization
+  - Currently using simple weighted linear combinations of three fixed attention masks
+- Need to train on larger dataset for more epochs
 - No measure of memory or speed usage
 
 ---
 
 ## Next Steps
 
-- Implement adaptive mask learning to identify important tokens
-- Measure memory usage and speed improvements
+- Optimize over more varied candidate masks and matrix families
+- Explore regularization, constraints, and penalties
+- Implement adaptive mask learning to identify important tokens, potentially for each sentence and/or position
 - Extend to full WikiText-2 dataset / more training data
+- Measure memory usage and speed improvements
 - Optimize hyperparameters
+
+---
 
 #### Future Ideas
 
