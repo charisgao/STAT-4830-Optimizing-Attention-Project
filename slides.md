@@ -142,7 +142,7 @@ Custom: not a question, however many people are involved in this matter ...
 
 - Optimize over more varied candidate masks and matrix families
 - Explore regularization, constraints, and penalties
-- Implement adaptive mask learning to identify important tokens, potentially for each sentence and/or position
+- Implement adaptive mask learning to identify important tokens potentially for each sentence and/or position
 - Extend to full WikiText-2 dataset / more training data
 - Measure memory usage and speed improvements
 - Optimize hyperparameters
