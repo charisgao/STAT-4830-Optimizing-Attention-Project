@@ -73,9 +73,6 @@ def forward(self, hidden_states, attention_mask=None, **kwargs):
 
 ```python
 def kl_divergence_loss(logits_custom, logits_ref, mask):
-    assert logits_custom.shape == logits_ref.shape, \
-        f"Shape mismatch: {logits_custom.shape} vs {logits_ref.shape}"
-
     log_probs_custom = F.log_softmax(logits_custom, dim=-1)
     probs_ref = F.softmax(logits_ref.detach(), dim=-1)  # Detach reference model
 
@@ -153,6 +150,7 @@ Custom: not a question, however many people are involved in this matter ...
 
 - Look into models besides GPT-2
 - Explore alternative approaches: blockwise/local attention, knowledge distillation, etc.
+- Research open-sourced implementations for recent developments in optimizations that affect attention
 
 ---
 
