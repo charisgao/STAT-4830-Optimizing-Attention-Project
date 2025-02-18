@@ -149,8 +149,8 @@ Custom: not a question, however many people are involved in this matter ...
 #### Future Ideas
 
 - Look into models besides GPT-2
+  - Research open-source implementations for recent developments in optimizations that affect attention
 - Explore alternative approaches: blockwise/local attention, knowledge distillation, etc.
-- Research open-sourced implementations for recent developments in optimizations that affect attention
 
 ---
 
