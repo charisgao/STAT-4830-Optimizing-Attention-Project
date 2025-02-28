@@ -125,10 +125,10 @@ In the future, we intend to extend this approach to **measure the computational 
 - **Text Generation:** We tested with a few prompts, observing that our custom model produced text in a style similar to GPT-2. The text is not as coherent as the reference model, but it is better than the "last-10-tokens" mask that we used previously.
 - **Convergence of Attention Masks Coefficients:** Below are graphs of the values of the coefficients of the attention masks for the linear combination of them for specific attention blocks.
 
-![Attention Block 0](./figures/week5_report_attention_block0.png)
-![Attention Block 4](./figures/week5_report_attention_block4.png)
-![Attention Block 8](./figures/week5_report_attention_block8.png)
-![Attention Block 11](./figures/week5_report_attention_block11.png)
+![Attention Block 0](../figures/week5_report_attention_block0.png)
+![Attention Block 4](../figures/week5_report_attention_block4.png)
+![Attention Block 8](../figures/week5_report_attention_block8.png)
+![Attention Block 11](../figures/week5_report_attention_block11.png)
 _Figure: Evolution of attention mask coefficients during training. Each line represents a coefficient for a different attention pattern. The convergence of these values suggests the model is learning stable attention patterns._
 
 ### Basic performance metrics
