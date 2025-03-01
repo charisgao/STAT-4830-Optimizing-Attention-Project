@@ -107,13 +107,13 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 In our previous implementation, we replaced the full self-attention with a custom attention layer that considered a linear combination of three candidate masks: candidate 0 only attends to the last 5 tokens, candidate 1 only attends to the last 10 tokens, and candidate 2 only attends to the first 5 tokens.
 
-Now, we have implemented a custom attention layer that replaces this linear combination with a linear combination of five candidate masks, allowing for **more flexible learnable attention patterns**. Each attention block's attention mask can be optimized during training, allowing the model to learn which tokens are most important. We consider a linear combination of the following candidate masks: last token, last 2nd token, last 3rd token, last 4th token, and last 5th token. We use a weighted linear combination of these attention masks, where the coefficients are tunable parameters. This approach maintains the expressiveness of full attention while providing the potential for optimization through learned sparsity patterns. We similarly trained by minimizing KL-divergence between the custom model's outputs and the reference GPT-2. By learning these position-specific patterns, we aim to discover natural sparsity in the attention mechanism that could lead to computational efficiency improvements while preserving model performance.
+Now, we have implemented a custom attention layer that replaces this linear combination with a linear combination of five candidate masks, allowing for **more flexible learnable attention patterns**. Each attention block's attention mask can be optimized during training, allowing the model to learn which tokens are most important. We consider a linear combination of the following candidate masks: last token, 2nd last token, 3rd last token, 4th last token, and 5th last token. We use a weighted linear combination of these attention masks, where the coefficients are tunable parameters. This approach maintains the expressiveness of full attention while providing the potential for optimization through learned sparsity patterns. While the specific choice of the last "5" tokens is arbitrary, there isn't a natural limit to pick. We cannot use a mask for each token as the number of tokens varies as more input text comes in, and we need a fixed number of coefficients to train. For this model, we similarly trained by minimizing KL-divergence between the custom model's outputs and the reference GPT-2. By learning these position-specific patterns, we aim to discover natural sparsity in the attention mechanism that could lead to computational efficiency improvements while preserving model performance.
 
-We included a L1 penalty when optimizing the coefficients of the attention masks so that they are not extremely large, and so that we can interpret which attention masks are significant. We also conducted several L1 regularization penalty experiments. In one such experiment, we replaced the attention layer with two possible candidate masks: first token and all tokens (full attention), with the goal of ensuring that adding regularization does make the coefficient for the first token 0 (we expect the model to not use this first token mask and only consider the full attention mask).
+We included a L1 penalty when optimizing the coefficients of the attention masks so that they are not extremely large, and so that we can interpret which attention masks are significant. We also conducted several L1 regularization penalty experiments. In one such experiment, we replaced the attention layer with two possible candidate masks: first token and all tokens (full attention), with the goal of ensuring that adding regularization does make the coefficient for the first token 0 (we expect the model to not use this first token mask and only consider the full attention mask, since the first token should have little bearing on the future outputs).
 
-We found that over the epochs, alpha1 tended to approach negative infinity, which means this mask is less and less important. (Coefficients of the candidate masks are actually the sigmoid of the alphas). On the other hand, alpha2 TODO.
+We found that over the epochs, alpha1 tended to approach negative infinity, which means this mask is less and less important. (Coefficients of the candidate masks are actually the sigmoid of the alphas). On the other hand, alpha2 did also decrease constantly, but it was still always larger than alpha1. As a result, we can see that the second mask was "more important" than the first, which aligns with what we expected. The reason alpha2 also tended towards infinity is likely due to the L1 penalty being enforced too harshly. We will decrease this coefficient to get better representative results in the future, but it is still clear that the "full attention" mask was weighted more than the "first token" mask.
 
-In the future, we intend to extend this approach to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization, penalty, and/or constraints (eg. low rank using SVD) to reduce complexity.
+In the future, we intend to extend this approach to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization, penalty, and/or constraints (eg. low rank using SVD) to reduce complexity. We also want to test with both more advanced models beyond GPT-2, and additionally smaller models than can be run locally.
 
 **Key Observations**
 
@@ -122,15 +122,14 @@ In the future, we intend to extend this approach to **measure the computational 
 
 ### Evidence your implementation works
 
-- **Successful Training Loop:** Over 100 epochs, the KL-divergence–based loss with L1 penalty steadily decreased from about TODO down to TODO on our dataset, indicating the custom attention can mimic the reference model's distributions.
+- **Successful Training Loop:** Over 100 epochs, the KL-divergence–based loss with L1 penalty steadily decreased from about 2.144 down to 0.402 on our dataset, indicating the custom attention can mimic the reference model's distributions.
 - **Text Generation:** We tested with a few prompts, observing that our custom model produced text in a style similar to GPT-2. The text is not as coherent as the reference model, but it is better than the linear combination of masks that we used previously.
 - **Convergence of Attention Masks Coefficients:** Below are graphs of the values of the coefficients of the attention masks for the linear combination of them for specific attention blocks.
 
-TODO REPLACE THESE
-![Attention Block 0](../figures/week5_report_attention_block0.png)
-![Attention Block 4](../figures/week5_report_attention_block4.png)
-![Attention Block 8](../figures/week5_report_attention_block8.png)
-![Attention Block 11](../figures/week5_report_attention_block11.png)
+![Attention Block 0](./figures/week7_report_attention_block0.png)
+![Attention Block 4](./figures/week7_report_attention_block4.png)
+![Attention Block 8](./figures/week7_report_attention_block8.png)
+![Attention Block 11](./figures/week7_report_attention_block11.png)
 _Figure: Evolution of attention mask coefficients during training. Each line represents a coefficient for a different attention pattern. The convergence of these values suggests the model is learning stable attention patterns._
 
 ### Basic performance metrics
@@ -138,12 +137,12 @@ _Figure: Evolution of attention mask coefficients during training. Each line rep
 Here are the loss values (KL-divergence + L1 penalty) across epochs (only partial data shown):
 
 ```
-Epoch 1 | Loss: TODO...
-Epoch 20 | Loss: TODO...
-Epoch 40 | Loss: TODO...
-Epoch 60 | Loss: TODO...
-Epoch 80 | Loss: TODO...
-Epoch 100 | Loss: TODO
+Epoch 1 | Loss: 2.1443
+Epoch 20 | Loss: 0.6724
+Epoch 40 | Loss: 0.5075
+Epoch 60 | Loss: 0.4362
+Epoch 80 | Loss: 0.4266
+Epoch 90 | Loss: 0.4021
 ```
 
 The consistent downward trend demonstrates that the custom attention mechanism aligns progressively better with the baseline.
@@ -152,25 +151,47 @@ The consistent downward trend demonstrates that the custom attention mechanism a
 
 Below are selected generation samples using the same prompts for both the reference and custom models. While the custom model's outputs sometimes drift or become less coherent, they still roughly follow the prompts and produce recognizable English words. This shows the model is capturing some of GPT-2's distribution, though it's obviously not perfect.
 
-**Prompt**: ...TODO...
+**Prompt**: Hello, my name is
 
-- **Reference**: ...TODO...
-- **Custom**: ...TODO...
+- **Reference**: Hello, my name is M.E.C.O., I am a member of the Uppsala University Human Sciences Research Council (HUSRC), which works in partnership with other universities like Sweden and Canada to enhance access for young scientists through
+- **Custom**: Hello, my name is of the same day The news for the top boardboard-1. However, it was actually make an incredible balance in a large portions to get their favorite "If you don't work with this year:Directional
 
-**Prompt**: ...TODO...
+**Prompt**: The meaning of life is
 
-- **Reference**: ...TODO...
-- **Custom**: ...TODO...
+- **Reference**: The meaning of life is that in this world, God does not make us immortal." "He makes you who are born and died to be the most perfect people when they die. That's why we can't love one another as much anymore,"
+- **Custom**: The meaning of life is a lot and the idea, in 2014 – The same or at to protectors are not necessarily can't-bondering this world's latest "I said. We're going back down on Tuesday week from time for example
 
-**Prompt**: ...TODO...
+**Prompt**: In a shocking turn of events,
 
-- **Reference**: ...TODO...
-- **Custom**: ...TODO...
+- **Reference**: In a shocking turn of events, I have been told by one former employee that we did not meet him personally as the head chef at Punta del Fogo in San Salvador. We only met on May 7th and it was confirmed shortly thereafter...
+- **Custom**: In a shocking turn of events, and bemooms, for the first day at least two of our friends in Los Angeles Superiority is now I would leave us all-day out of the current as well. The American Idolupli was
 
-**Prompt**: ...TODO...
+**Prompt**: The future of artificial intelligence
 
-- **Reference**: ...TODO...
-- **Custom**: ...TODO...
+- **Reference**: The future of artificial intelligence, and how to use it more effectively in our business contexts We have seen the emergence so far from commercial AI that we are very worried about its potential. It is no longer just a matter for "saying", but
+- **Custom**: The future of artificial intelligence and therefore it's latest two other things are just don't get a couple, if we're now I. This is nothinters before he pointedly has been able to be considered the "It was also noted-
+
+We also tried it with some slightly longer prompts:
+
+**Prompt**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars
+
+- **Reference**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars. To his great surprise and delight it was located just outside Nefertiti City's main streets in broad daylight
+- **Custom**: The future of artificial intelligence and therefore it's latest two other things are just don't get a couple, if we're now I. This is nothinters before he pointedly has been able to be considered the "It was also noted". It is not to change was just
+
+**Prompt**: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers
+
+- **Reference**: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers in space… But it took a long time for mankind to realize they were entering uncharted territory – something that
+- **Custom**: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers to prevent it is your own party members are still more than one of all but that's next week after a new
+
+**Prompt**: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation
+
+- **Reference**: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation and research into food production techniques in other societies, she knew nothing about human consumption when it came to meat products… But one
+- **Custom**: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation to be a little more than I do not yet when you'd never put down in particular day or are all manner only one year
+
+**Prompt**: The detective pushed open the heavy oak door, stepping into a room thick with the scent of old books and something more sinister—fear
+
+- **Reference**: The detective pushed open the heavy oak door, stepping into a room thick with the scent of old books and something more sinister—fear. "You're in trouble," he said firmly. "I don't know why you'd come here."
+- **Custom**: The detective pushed open the heavy oak door, stepping into a room thick with the scent of old books and something more sinister—fear's been taken over four to be completely in its time for any sortof them both sides. The future later have
 
 ### Current Limitations
 
@@ -180,7 +201,7 @@ Below are selected generation samples using the same prompts for both the refere
 
 ### Resource Usage Measurements
 
-- On one T4 GPU on Google Colab, this took a while to run for 100 epochs.
+- On one T4 GPU on Google Colab, this took a while to run for 100 epochs (about 30 mins).
 - These resource measurements are modest because our demonstration used a restricted sequence length and a small amount of data.
 
 ### Unexpected challenges
