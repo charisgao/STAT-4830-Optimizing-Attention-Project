@@ -111,7 +111,7 @@ Now, we have implemented a custom attention layer that replaces this linear comb
 
 We included a L1 penalty when optimizing the coefficients of the attention masks so that they are not extremely large, and so that we can interpret which attention masks are significant. We also conducted several L1 regularization penalty experiments. In one such experiment, we replaced the attention layer with two possible candidate masks: first token and all tokens (full attention), with the goal of ensuring that adding regularization does make the coefficient for the first token 0 (we expect the model to not use this first token mask and only consider the full attention mask, since the first token should have little bearing on the future outputs).
 
-We found that over the epochs, alpha1 tended to approach negative infinity, which means this mask is less and less important. (Coefficients of the candidate masks are actually the sigmoid of the alphas). On the other hand, alpha2 did also decrease constantly, but it was still always larger than alpha1. As a result, we can see that the second mask was "more important" than the first, which aligns with what we expected. The reason alpha2 also tended towards infinity is likely due to the L1 penalty being enforced too harshly. We will decrease this coefficient to get better representative results in the future, but it is still clear that the "full attention" mask was weighted more than the "first token" mask.
+We found that over the epochs, alpha1 tended to approach negative infinity, which means this mask is less and less important. (Coefficients of the candidate masks are actually the sigmoid of the alphas). On the other hand, alpha2 did also decrease constantly, but it was still always larger than alpha1. As a result, we can see that the second mask was "more important" than the first, which aligns with what we expected. The reason alpha2 also tended towards negative infinity is likely due to the L1 penalty being enforced too harshly. We have done a few experiments with this coefficient, but will decrease this more to get better representative results in the future, but it is still clear that the "full attention" mask was weighted more than the "first token" mask.
 
 In the future, we intend to extend this approach to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization, penalty, and/or constraints (eg. low rank using SVD) to reduce complexity. We also want to test with both more advanced models beyond GPT-2, and additionally smaller models than can be run locally.
 
@@ -123,13 +123,14 @@ In the future, we intend to extend this approach to **measure the computational 
 ### Evidence your implementation works
 
 - **Successful Training Loop:** Over 100 epochs, the KL-divergence–based loss with L1 penalty steadily decreased from about 2.144 down to 0.402 on our dataset, indicating the custom attention can mimic the reference model's distributions.
-- **Text Generation:** We tested with a few prompts, observing that our custom model produced text in a style similar to GPT-2. The text is not as coherent as the reference model, but it is better than the linear combination of masks that we used previously.
+- **Text Generation:** We tested with a few prompts, observing that our custom model produced text in a style similar to GPT-2. The text is not as coherent as the reference model though.
 - **Convergence of Attention Masks Coefficients:** Below are graphs of the values of the coefficients of the attention masks for the linear combination of them for specific attention blocks.
 
 ![Attention Block 0](./figures/week7_report_attention_block0.png)
 ![Attention Block 4](./figures/week7_report_attention_block4.png)
 ![Attention Block 8](./figures/week7_report_attention_block8.png)
 ![Attention Block 11](./figures/week7_report_attention_block11.png)
+
 _Figure: Evolution of attention mask coefficients during training. Each line represents a coefficient for a different attention pattern. The convergence of these values suggests the model is learning stable attention patterns._
 
 ### Basic performance metrics

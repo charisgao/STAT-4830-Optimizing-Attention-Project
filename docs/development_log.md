@@ -42,7 +42,7 @@ Prof. Davis provided valuable feedback and suggested two key approaches to enhan
 
 ### Weighted Combination of Attention Masks
 
-As a next step, we replaced the fixed last-10-tokens window with a learnable weighted linear combination of three candidate masks: candidate 0 only attends to the last 5 tokens, candidate 1 only attends to the last 10 tokens, and candidate 2 only attends to the first 5 tokens. We also added a L1 penalty when optimizing the coefficients and similarly trained to minimize the KL-divergence between the custom model's outputs and reference model. Our next step will be including more candidate masks in the linera combination and experimenting with different types of masks beyond first _ or last _ tokens.
+As a next step, we replaced the fixed last-10-tokens window with a learnable weighted linear combination of three candidate masks: candidate 0 only attends to the last 5 tokens, candidate 1 only attends to the last 10 tokens, and candidate 2 only attends to the first 5 tokens. We also added a L1 penalty when optimizing the coefficients and similarly trained to minimize the KL-divergence between the custom model's outputs and reference model. Our next step will be including more candidate masks in the linear combination and experimenting with different types of masks beyond first _ or last _ tokens.
 
 ## Week 6
 
@@ -51,3 +51,9 @@ As a next step, we replaced the fixed last-10-tokens window with a learnable wei
 We discussed our progress from a fixed last-10-tokens window to a linear combination of candidate masks. We also explained another experimential implementation with learning an attention mask per position, but did not achieve promising results since there's too much variability in what tokens each position should attend to for each sentence. We also outlined next steps, specifically to add more candidate masks, explore regularization, and add speed and memory usage tracking.
 
 Prof. Davis mentioned that a DeepSeek paper came out today (https://arxiv.org/abs/2502.11089) and that we should do more literature review to explore how they optimize for sparse attention. He also suggested we can look into other models such as Mistral that already optimize attention and learn techniques from them.
+
+## Week 7
+
+### Weighted Combination of Attention Masks
+
+We replaced the learnable weighted linear combination of three candidate masks with five candidate masks: attend to the last token, 2nd to last token, 3rd to last token, 4th to last token, and 5th to last token. We also conducted experiments exploring the effects of the L1 penalty and attempted to tune the hyperparameter of how much L1 penalty to apply. Our next step will be including even more candidate masks in the linear combination and also looking into more state of the art approaches towards this attention problem.
