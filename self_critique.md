@@ -2,7 +2,7 @@
 
 ## **OBSERVE**
 
-Reading through my report, I notice it has a strong theoretical foundation but there are some arbitrary hyperparameter decisions such as using 5 candidate masks. It is not clear how the candidate masks are chosen. Also, more metrics are needed to confirm that this solution outperforms the previous linear combination.
+Reading through my report, I notice it has a strong theoretical foundation but there are some arbitrary hyperparameter decisions such as using 5 candidate masks. It is not clear how the candidate masks are chosen. Also, more metrics are needed to confirm that this solution outperforms the previous linear combination. The completions to the prompts are also definitely not as coherent as the reference response, suggesting more exploration should be done with what candidate masks we use.
 
 ## **ORIENT**
 
@@ -19,7 +19,7 @@ Reading through my report, I notice it has a strong theoretical foundation but t
 
 ### Critical Risks/Assumptions
 
-I'm assuming the approach of using linear combinations of position-specific attention masks will yield meaningful improvements. However, without actual measurements of memory usage or computation time, I can't verify if this implementation achieves the stated goal of reducing the O(n^2) bottleneck.
+I'm assuming the approach of using linear combinations of position-specific attention masks will yield meaningful improvements. However, without actual measurements of memory usage or computation time, I can't verify if this implementation achieves the stated goal of reducing the $O(n^2)$ bottleneck.
 
 ## **DECIDE**
 

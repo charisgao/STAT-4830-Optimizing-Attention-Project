@@ -173,11 +173,6 @@ Below are selected generation samples using the same prompts for both the refere
 
 We also tried it with some slightly longer prompts:
 
-**Prompt**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars
-
-- **Reference**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars. To his great surprise and delight it was located just outside Nefertiti City's main streets in broad daylight
-- **Custom**: The future of artificial intelligence and therefore it's latest two other things are just don't get a couple, if we're now I. This is nothinters before he pointedly has been able to be considered the "It was also noted". It is not to change was just
-
 **Prompt**: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers
 
 - **Reference**: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers in space… But it took a long time for mankind to realize they were entering uncharted territory – something that
