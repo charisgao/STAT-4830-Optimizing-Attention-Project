@@ -152,19 +152,10 @@ Custom: not a question, however many people are involved in this matter ...
 ## Next Steps
 
 - Optimize over more varied candidate masks and matrix families
-- Explore regularization, constraints, and penalties
-- Implement adaptive mask learning to identify important tokens potentially for each sentence and/or position
 - Extend to full WikiText-2 dataset / more training data
 - Measure memory usage and speed improvements
 - Optimize hyperparameters
-
----
-
-#### Future Ideas
-
-- Look into models besides GPT-2
-  - Research open-source implementations for recent developments in optimizations that affect attention
-- Explore alternative approaches: blockwise/local attention, knowledge distillation, etc.
+- We've conducted a literature review of recent developments in optimizations that affect attention (TODO) , can try implementing these
 
 ---
 
