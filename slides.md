@@ -155,7 +155,7 @@ Custom: not a question, however many people are involved in this matter ...
 - Extend to full WikiText-2 dataset / more training data
 - Measure memory usage and speed improvements
 - Optimize hyperparameters
-- We've conducted a literature review of recent developments in optimizations that affect attention (TODO) , can try implementing these
+- We've conducted a literature review of recent developments in optimizations that affect attention (i.e. Lexico, NSA), considering trying to implement these / finding ways to imitate these papers
 
 ---
 
