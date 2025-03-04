@@ -9,7 +9,7 @@ style: |
 
 # Optimizing Attention Mechanisms in Transformers
 
-#### Week 6: Project Overview & Results
+#### Lightning Talk
 
 Chandler Cheung, Charis Gao, Jordan Hochman
 
@@ -35,13 +35,13 @@ Chandler Cheung, Charis Gao, Jordan Hochman
 
 ## Mathematical Formulation
 
-Core objective: minimize KL-divergence between baseline and custom model
+Core objective: minimize KL-divergence between baseline and custom model over all training examples $X$
 $$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} \,\|\, P_{\text{custom}}\bigr)$$
 
-#### Success Metrics
+#### Metrics
 
 - Accuracy retention: comparable performance
-- Computational improvement: reduced memory and speed gains
+- Computational improvement (sub-quadratic): reduced memory and/or speed gains
 - Distribution alignment: low KL-divergence
 
 ---
@@ -49,8 +49,9 @@ $$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} \,\|\, P_{\text{custom}}\bigr)$
 ## Current Implementation
 
 - Baseline model: GPT-2 (unoptimized attention mechanism)
-- Custom attention module: linear combination of three candidate masks: last 5 tokens, last 10 tokens, and first 5 tokens
-  - Learnable weight parameters w/ L1 penalty (independent for each transformer block/layer), rather than fixed sliding window
+- Custom attention module: linear combination of candidate masks
+  - Learnable weight parameters w/ L1 penalty (independent for each transformer block/layer)
+- Dataset: WikiText-2
 
 ```python
 def forward(self, hidden_states, attention_mask=None, **kwargs):
@@ -92,11 +93,12 @@ def kl_divergence_loss(logits_custom, logits_ref, mask):
   - Custom attention can mimic the reference model's distributions
   - Model successfully learns sparse attention pattern
 - Tested with a few prompts, resulting in output text mimicing style similar to GPT-2, though often less coherent due to the limited context
-  - Weights for linear combination are specific to each transformer block, but shared across all positions/sequences/heads within that block
 
 ---
 
 ## Current Results - Attention Masks Coefficients Convergence
+
+<!-- TODO -->
 
 ![width:330px height:231px](./figures/week5_report_attention_block1.png) ![width:330px height:231px](./figures/week5_report_attention_block4.png) ![width:330px height:231px](./figures/week5_report_attention_block8.png)
 
@@ -126,10 +128,22 @@ Custom: not a question, however many people are involved in this matter ...
 
 ---
 
+## Current Results - Regularization
+
+- Included a L1 penalty so we can interpret which attention masks are significant
+- L1 regularization experiment: replaced attention layer with 2 possible candidate masks: first token and all tokens (fill attention)
+
+  - Check that regularization makes coefficient for first token 0 (we expect the model to not use this first token mask and only consider the full attention mask, since the first token should have little bearing on future outputs)
+
+  <!-- TODO -->
+  <!-- We found that over the epochs, alpha1 tended to approach negative infinity, which means this mask is less and less important. (Coefficients of the candidate masks are actually the sigmoid of the alphas). On the other hand, alpha2 did also decrease constantly, but it was still always larger than alpha1. As a result, we can see that the second mask was "more important" than the first, which aligns with what we expected. The reason alpha2 also tended towards negative infinity is likely due to the L1 penalty being enforced too harshly. We have done a few experiments with this coefficient, but will decrease this more to get better representative results in the future, but it is still clear that the "full attention" mask was weighted more than the "first token" mask. -->
+
+---
+
 ## Current Limitations
 
 - Limited mask optimization
-  - Currently using simple weighted linear combinations of three fixed attention masks
+  - Currently using simple weighted linear combinations of 3-5 fixed attention masks
 - Need to train on larger dataset for more epochs
 - No measure of memory or speed usage
 
