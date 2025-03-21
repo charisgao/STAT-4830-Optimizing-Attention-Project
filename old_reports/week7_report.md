@@ -60,9 +60,6 @@ summed over all training examples $X$. This objective encourages the custom atte
 - **Adaptive Attention Mask**: Long-term, we want to learn a sparse mask or restricted set of tokens that provide sufficient context with fewer computations.
 - **KL-Divergence Alignment**: By aligning probabilities, we ensure that any modifications to attention remain faithful to the baseline's predictions.
 - **Sub-Quadratic Focus**: The ultimate aim is to reduce attention complexity from $O(n^2)$ to something more tractable for large $n$.
-- **Native Sparse Attention**: NSA is a hardware-optimized and end-to-end trainable sparse attention mechanism that reduces computational overhead through a hierarchical approach. It organizes tokens into compressed representations for global context, selectively retains the most relevant tokens for local precision, and employs a sliding window mechanism to maintain continuity in processing.
-
-![Native Sparse Attention Diagram](./figures/NSA_structure.png)
 
 ### PyTorch Implementation Strategy
 
@@ -70,11 +67,6 @@ summed over all training examples $X$. This objective encourages the custom atte
 2. **Custom Attention Module**: Replace the default attention with a mechanism that only processes a subset of tokens, with learnable parameters dictating which tokens matter most.
 3. **Loss Computation**: Compute logits from both models on the same input batch, then apply KL-divergence.
 4. **Parameter Updates**: Use standard optimization (e.g., AdamW) to train the new attention module while freezing or partially freezing other layers.
-
-Native Sparse Attention
-1. Implement hierarchical attention with compressed tokens, selective attention, and sliding window with a GPT2 model
-2. Build reference model of GPT2 with plain vanilla attention
-3. Compare KL divergence and output of generated text
 
 ### Measure of Success
 
@@ -84,7 +76,7 @@ Native Sparse Attention
    - Critical tests:
      - **Attention matrix fidelity**: Mean squared error (MSE) $\le 1e-4$ between original and optimized attention probabilities.
      - **Gradient similarity**: Cosine similarity $\ge 0.95$ between gradients of original and optimized attention layers during backward pass.
-     - **KL Divergence**: Divergence between the two probability distributions of the next token $\le 0.001$.
+     - **KL Divergence**: Divergence between the two probability distribution of next token $\le 0.001$.
 2. **Memory Efficiency**:
    - **Peak memory reduction**: $\ge 30\%$ for sequences $\ge 1024$ tokens.
    - Measurement:
@@ -92,13 +84,6 @@ Native Sparse Attention
        - **Training**: Forward/backward pass of a single batch.
        - **Inference**: Forward pass only.
      - Use PyTorch's `torch.profiler.profile()` to isolate attention operations.
-
-Native Sparse Attention
-1. **Natural Language Flow**
-   - Evaluate the coherence and fluency of the generated text by comparing it to the baseline model's outputs. This will involve:
-     - **Human Evaluation**: Conducting qualitative assessments where human judges rate the generated text on criteria such as grammatical correctness, logical flow, and overall readability.
-     - **Diversity of Outputs**: Analyzing the variety in generated responses to the same prompts to ensure that the model does not produce repetitive or overly similar outputs, which can indicate a lack of creativity or flexibility in language generation.
-2. **Low KL divergence**
 
 ### Validation Methods
 
@@ -114,7 +99,7 @@ Native Sparse Attention
 
 - **Single GPU Usage**: We plan to use one GPU for training and validation on WikiText-2 (with sequences up to 512 tokens).
 - **Training Times**: Expect shorter runs (on the order of a few hours) to confirm feasibility.
-- **Future Scaling**: After proving the concept, we may switch to a more powerful GPU and larger corpora (WikiText-103 or beyond). We will be utilizing Google Cloud for access to more powerful GPUs and TPUs, utilizing the provided credit.
+- **Future Scaling**: After proving the concept, we may switch to a more powerful GPU and larger corpora (WikiText-103 or beyond).
 
 ---
 
@@ -129,14 +114,6 @@ We included a L1 penalty when optimizing the coefficients of the attention masks
 We found that over the epochs, alpha1 tended to approach negative infinity, which means this mask is less and less important. (Coefficients of the candidate masks are actually the sigmoid of the alphas). On the other hand, alpha2 did also decrease constantly, but it was still always larger than alpha1. As a result, we can see that the second mask was "more important" than the first, which aligns with what we expected. The reason alpha2 also tended towards negative infinity is likely due to the L1 penalty being enforced too harshly. We have done a few experiments with this coefficient, but will decrease this more to get better representative results in the future, but it is still clear that the "full attention" mask was weighted more than the "first token" mask.
 
 In the future, we intend to extend this approach to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization, penalty, and/or constraints (eg. low rank using SVD) to reduce complexity. We also want to test with both more advanced models beyond GPT-2, and additionally smaller models than can be run locally.
-
-#### Native Sparse Attention
-
-In our implementation of Native Sparse Attention, we manually created a hierarchical attention layer that incorporates compressed tokens, selective attention, and a sliding window mechanism using PyTorch. This approach aimed to optimize the attention computation by reducing the number of tokens processed while maintaining the model's performance. We trained the model for 10 epochs using 50% of the WikiText-2 dataset as our training data. However, the initial results were disappointing, as the generated outputs consisted of random symbols rather than coherent text.
-
-To address these issues, we adjusted the implementation by increasing the context size and modifying the parameters for both the selective attention and sliding window mechanisms. Despite these changes, the new results still yielded outputs that entirely comprised exclamation points, indicating that the model was not effectively learning meaningful patterns in the data.
-
-We could not find an official implementation of NSA by DeepSeek researchers. In our search for improvement, we found a library implementation of Native Sparse Attention by Philip Wang at Observe.AI and attempted to integrate it into our pipeline. However, we encountered challenges related to the return type and value of the forward method within the attention class. This issue rendered the model unable to generate coherent text, although it successfully completed the training loop. It remains unclear whether the model has learned anything meaningful or if the outputs are simply gibberish. Notably, the KL divergence loss has been decreasing with each epoch, suggesting some level of learning is occurring, but the quality of the generated text remains a significant concern.
 
 **Key Observations**
 
@@ -212,14 +189,6 @@ We also tried it with some slightly longer prompts:
 - **Reference**: The detective pushed open the heavy oak door, stepping into a room thick with the scent of old books and something more sinister—fear. "You're in trouble," he said firmly. "I don't know why you'd come here."
 - **Custom**: The detective pushed open the heavy oak door, stepping into a room thick with the scent of old books and something more sinister—fear's been taken over four to be completely in its time for any sortof them both sides. The future later have
 
-#### Native Sparse Attention Tests
-Prompt: Artificial intelligence
-Reference: [Artificial intelligence] is a new field of research that has been in the works for a while now.
-Custom: [Artificial intelligence]""%&&&(&&,&&&0&0,0&,000&00&00000000000000000&0000,0&000,0,0&[0000000&000[00[0&0,0[0[0000&[00[,[0[000
-
-Reference: Artificial intelligence is a new field of research that has been in the works for a while now.
-Custom: Artificial intelligence!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 ### Current Limitations
 
 - **Minimal Dataset**: Synthetic or small text corpora, offering limited insight into real-world performance (we only use 1000 training samples).
@@ -246,11 +215,10 @@ Custom: Artificial intelligence!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 - **Extend Training Data:** Use the full WikiText-2 dataset (rather than just 1000 samples) to get more realistic coverage and reduce overfitting.
 - **Fine-Tune Hyperparameters:** Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
 - **Efficiency and Memory Improvement:** Track speed and memory usage of attention masks.
-- **Attention Restructuring for NSA**: adjust implementation so that words are produced instead of repetitive symbols
 
 ### Literature review
 
-We conducted a literature review of two papers: "Lexico: Extreme KV Cache Compression via Sparse Coding Over Universal Dictionaries" and "Native Sparse Attention (NSA): A Hardware-Aligned and Trainable Sparse Attention Mechanism", which discuss optimizations to improve model memory usage. (detailed summary in `papers/.) Lexico uses a KV cache compression technique that leverages sparse coding to represent key-value pairs using a small set of learned universal dictionary vectors. NSA introduces a sparse attention mechanism that incorporates predefined sparsity patterns directly into model training. The approach defines sparse attention templates that match modern hardware capabilities, ensuring both algorithmic and hardware efficiency.These techniques represent complementary approaches to addressing the memory bottlenecks in LLMs: Lexico focuses on compressing the stored intermediate states, while NSA optimizes the attention computation itself.
+We conducted a literature review of two papers: "Lexico: Extreme KV Cache Compression via Sparse Coding Over Universal Dictionaries" and "Native Sparse Attention (NSA): A Hardware-Aligned and Trainable Sparse Attention Mechanism", which discuss optimizations to improve model memory usage. (detailed summary in `papers/`.) Lexico uses a KV cache compression technique that leverages sparse coding to represent key-value pairs using a small set of learned universal dictionary vectors. NSA introduces a sparse attention mechanism that incorporates predefined sparsity patterns directly into model training. The approach defines sparse attention templates that match modern hardware capabilities, ensuring both algorithmic and hardware efficiency.These techniques represent complementary approaches to addressing the memory bottlenecks in LLMs: Lexico focuses on compressing the stored intermediate states, while NSA optimizes the attention computation itself.
 
 We will consider further exploring or finding ways to imitiate what these papers have done for their attention mechanism as suggestions for our next steps.
 
