@@ -17,9 +17,6 @@ Reading through the report, we notice it has a strong theoretical foundation but
 - Output text is less coherent than GPT-2 output text
 - No actual memory or computational efficiency measurements
 - Lack of comparison between baseline and custom model
-- Separate notebooks testing different things
-- Limited context window for GPT-2
-- Non-functional Performer implementation
 
 ### Critical Risks/Assumptions
 
@@ -29,9 +26,9 @@ We assume the approach of using linear combinations of position-specific attenti
 
 ### Concrete Next Actions
 
+- Explore more candidate masks (with the goal of the custom response being more similar to the reference response)
 - Implement and execute memory/computation benchmarks comparing baseline and custom attention (using torch.cuda.max_memory_allocated() as described in the approach)
 - Create visualization comparing attention patterns between baseline and custom models to demonstrate what the model is actually learning
-- Fix model with Performer attention, and fix model with Kerformer attention
 
 ## **ACT**
 

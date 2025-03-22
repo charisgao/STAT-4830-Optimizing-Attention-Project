@@ -60,6 +60,7 @@ summed over all training examples $X$. This objective encourages the custom atte
 - **Adaptive Attention Mask**: Long-term, we want to learn a sparse mask or restricted set of tokens that provide sufficient context with fewer computations.
 - **KL-Divergence Alignment**: By aligning probabilities, we ensure that any modifications to attention remain faithful to the baseline's predictions.
 - **Sub-Quadratic Focus**: The ultimate aim is to reduce attention complexity from $O(n^2)$ to something more tractable for large $n$.
+- **Performers and Kerformers**: These use kernel-based approximations to replace softmax attention, reducing complexity to linear time. Performers rely on random feature maps, while Kerformers improve this with structured, data-aware projections that are learned—making both efficient for long-sequence modeling without major accuracy loss.
 - **Native Sparse Attention**: NSA is a hardware-optimized and end-to-end trainable sparse attention mechanism that reduces computational overhead through a hierarchical approach. It organizes tokens into compressed representations for global context, selectively retains the most relevant tokens for local precision, and employs a sliding window mechanism to maintain continuity in processing.
 
 ![Native Sparse Attention Diagram](./figures/NSA_structure.png)
@@ -71,10 +72,16 @@ summed over all training examples $X$. This objective encourages the custom atte
 3. **Loss Computation**: Compute logits from both models on the same input batch, then apply KL-divergence.
 4. **Parameter Updates**: Use standard optimization (e.g., AdamW) to train the new attention module while freezing or partially freezing other layers.
 
-Native Sparse Attention
+Native Sparse Attention:
 1. Implement hierarchical attention with compressed tokens, selective attention, and sliding window with a GPT2 model
 2. Build reference model of GPT2 with plain vanilla attention
 3. Compare KL divergence and output of generated text
+
+Performer:
+1. Implement a Performer using the base GPT2 model, replacing the attention layer with a kernel-based linear attention module (e.g., FAVOR+, and potentially later causal FAVOR+).
+2. Build a reference GPT2 model with standard attention for comparison.
+3. Train both models on identical inputs and compute KL-divergence to measure alignment.
+4. Evaluate generation quality and speed to assess trade-offs in approximation vs. performance.
 
 ### Measure of Success
 
@@ -137,6 +144,10 @@ In our implementation of Native Sparse Attention, we manually created a hierarch
 To address these issues, we adjusted the implementation by increasing the context size and modifying the parameters for both the selective attention and sliding window mechanisms. Despite these changes, the new results still yielded outputs that entirely comprised exclamation points, indicating that the model was not effectively learning meaningful patterns in the data.
 
 We could not find an official implementation of NSA by DeepSeek researchers. In our search for improvement, we found a library implementation of Native Sparse Attention by Philip Wang at Observe.AI and attempted to integrate it into our pipeline. However, we encountered challenges related to the return type and value of the forward method within the attention class. This issue rendered the model unable to generate coherent text, although it successfully completed the training loop. It remains unclear whether the model has learned anything meaningful or if the outputs are simply gibberish. Notably, the KL divergence loss has been decreasing with each epoch, suggesting some level of learning is occurring, but the quality of the generated text remains a significant concern.
+
+#### Performer
+
+We ran into issues implementing the Performer as a replacement for the attention in GPT2, and are still working on fixing the issues. However, with one implementation that seems to work, we do get intelligible output, albeit not the best. The loss does decrease to zero, but we do want to measure the speed and accuracy better in the future.
 
 **Key Observations**
 
@@ -220,6 +231,11 @@ Custom: [Artificial intelligence]""%&&&(&&,&&&0&0,0&,000&00&00000000000000000&00
 Reference: Artificial intelligence is a new field of research that has been in the works for a while now.
 Custom: Artificial intelligence!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+#### Performer
+Prompt: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers
+Reference: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers—the Arkion crew made it to hyperspace in January 3160 – was launched from this world's barren wasteland
+Custom: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers When we are a few 1). We have only then to help: Rascal\'1-s at school ------------------------------------------------------------------------
+
 ### Current Limitations
 
 - **Minimal Dataset**: Synthetic or small text corpora, offering limited insight into real-world performance (we only use 1000 training samples).
@@ -247,12 +263,14 @@ Custom: Artificial intelligence!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 - **Fine-Tune Hyperparameters:** Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
 - **Efficiency and Memory Improvement:** Track speed and memory usage of attention masks.
 - **Attention Restructuring for NSA**: adjust implementation so that words are produced instead of repetitive symbols
+- **Fix Performer Implementation**: Fully flush out Performer implementation
+- **Add Kerformer Implementation**: Add Kerformer implementation and compare with previous methods.
 
 ### Literature review
 
 We conducted a literature review of two papers: "Lexico: Extreme KV Cache Compression via Sparse Coding Over Universal Dictionaries" and "Native Sparse Attention (NSA): A Hardware-Aligned and Trainable Sparse Attention Mechanism", which discuss optimizations to improve model memory usage. (detailed summary in `papers/.) Lexico uses a KV cache compression technique that leverages sparse coding to represent key-value pairs using a small set of learned universal dictionary vectors. NSA introduces a sparse attention mechanism that incorporates predefined sparsity patterns directly into model training. The approach defines sparse attention templates that match modern hardware capabilities, ensuring both algorithmic and hardware efficiency.These techniques represent complementary approaches to addressing the memory bottlenecks in LLMs: Lexico focuses on compressing the stored intermediate states, while NSA optimizes the attention computation itself.
 
-We will consider further exploring or finding ways to imitiate what these papers have done for their attention mechanism as suggestions for our next steps.
+We will consider further exploring or finding ways to imitate what these papers have done for their attention mechanism as suggestions for our next steps.
 
 ### What You've Learned So Far
 
