@@ -82,7 +82,7 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 1. Low KL divergence
 2. Memory or space efficiency
-3. Natural Language Flow\*\*
+3. Natural Language Flow
    - Evaluate the coherence and fluency of the generated text by comparing it to the baseline model's outputs. This will involve:
      - **Human Evaluation**: Conducting qualitative assessments where human judges rate the generated text on criteria such as grammatical correctness, logical flow, and overall readability.
      - **Diversity of Outputs**: Analyzing the variety in generated responses to the same prompts to ensure that the model does not produce repetitive or overly similar outputs, which can indicate a lack of creativity or flexibility in language generation.
@@ -129,37 +129,43 @@ Below are selected generation samples using the same prompts for both the refere
 
 #### Native Sparse Attention
 
-Prompt: Artificial intelligence
-Reference: [Artificial intelligence] is a new field of research that has been in the works for a while now.
-Custom: [Artificial intelligence]""%&&&(&&,&&&0&0,0&,000&00&00000000000000000&0000,0&000,0,0&[0000000&000[00[0&0,0[0[0000&[00[,[0[000
+**Prompt**: Artificial intelligence
 
-Reference: Artificial intelligence is a new field of research that has been in the works for a while now.
-Custom: Artificial intelligence!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+- **Reference**: [Artificial intelligence] is a new field of research that has been in the works for a while now.
+- **Custom**: [Artificial intelligence]""%&&&(&&,&&&0&0,0&,000&00&00000000000000000&0000,0&000,0,0&[0000000&000[00[0&0,0[0[0000&[00[,[0[000
+
+- **Reference**: Artificial intelligence is a new field of research that has been in the works for a while now.
+- **Custom**: Artificial intelligence!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #### Performer
 
-Prompt: Hello, my name is
-Reference: Hello, my name is Kipi (I think of you as his friend) and I'm looking for a new job at the company. My only problem with your application was that there were no applications from other employees so we had to come back
-Custom: Hello, my name is to the city of a big and his personal information that he were in an important. The White House (20 on this time during their new equipment or we have been seen as much for free , 5 years ago because it was
+**Prompt**: Hello, my name is
 
-Prompt: The future of artificial intelligence
-Reference: The future of artificial intelligence will involve creating a machine with the ability to solve complex problems and problem-solving skills that can be learned over time, by making choices based on which data is kept nearby.
-"What we hope for now are two
-Custom: The future of artificial intelligence and the new on the current I didn't often, if you will also seen a few days as well believed that they were not to prevent his wife. The other teams around in order from this at home for him out some
+- **Reference**: Hello, my name is Kipi (I think of you as his friend) and I'm looking for a new job at the company. My only problem with your application was that there were no applications from other employees so we had to come back
+- **Custom**: Hello, my name is to the city of a big and his personal information that he were in an important. The White House (20 on this time during their new equipment or we have been seen as much for free , 5 years ago because it was
 
-Prompt: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars
-Reference: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars.
-There was no time to reflect on what had just happened and decided that it would be best if we move
-Custom: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars and even as their first time to look at least half- in 1
-The original creation was also has been killed
+**Prompt**: The future of artificial intelligence
 
-Prompt: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers
-Reference: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers was constructed at Columbia University in New York State (now Stony Brook). Once again it became clear that humans were
-Custom: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers to be so important or in his body but were not believed that such a few days is also released this will never
+- **Reference**: The future of artificial intelligence will involve creating a machine with the ability to solve complex problems and problem-solving skills that can be learned over time, by making choices based on which data is kept nearby.
+  "What we hope for now are two
+- **Custom**: The future of artificial intelligence and the new on the current I didn't often, if you will also seen a few days as well believed that they were not to prevent his wife. The other teams around in order from this at home for him out some
 
-Prompt: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation
-Reference: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation and experiments using a small amount of mercury in its juice, she was confident that any results would be conclusive enough to bring their use
-Custom: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation in particular were not be considered for a few days and I was his name is an excellent work (s or one year around The
+**Prompt**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars
+
+- **Reference**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars.
+  There was no time to reflect on what had just happened and decided that it would be best if we move
+- **Custom**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars and even as their first time to look at least half- in 1
+  The original creation was also has been killed
+
+**Prompt**: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers
+
+- **Reference**: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers was constructed at Columbia University in New York State (now Stony Brook). Once again it became clear that humans were
+- **Custom**: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers to be so important or in his body but were not believed that such a few days is also released this will never
+
+**Prompt**: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation
+
+- **Reference**: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation and experiments using a small amount of mercury in its juice, she was confident that any results would be conclusive enough to bring their use
+- **Custom**: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation in particular were not be considered for a few days and I was his name is an excellent work (s or one year around The
 
 ### Current Limitations
 
