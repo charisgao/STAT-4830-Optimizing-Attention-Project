@@ -113,21 +113,15 @@ We could not find an official implementation of NSA by DeepSeek researchers. In 
 
 ### Performer
 
-TODO
-We ran into issues implementing the Performer as a replacement for the attention in GPT2, and are still working on fixing the issues. However, with one implementation that seems to work, we do get intelligible output, albeit not the best. The loss does decrease to zero, but we do want to measure the speed and accuracy better in the future.
+We ran into issues implementing the Performer as a replacement for the attention in GPT2, and are still working on fixing the issues. Specifically for our implementation, we use FAVOR+ to map Q and K to a different space using random projections. However, we face a few issues with NaN and infinity values, possibly because of overflow/underflow. There were also issues with division by zero, so we explored various epsilon values. With all of these additions, we do get some sort of output, albeit not the best.
 
-In the future, we intend to extend these approaches to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization, penalty, and/or constraints (eg. low rank using SVD) to reduce complexity. We also want to test with both more advanced models beyond GPT-2, and additionally smaller models than can be run locally.
+In the future, we intend to extend both these approaches to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization, penalty, and/or constraints (eg. low rank using SVD) to reduce complexity. We also want to test with both more advanced models beyond GPT-2, and additionally smaller models than can be run locally.
 
 **Key Observations**
 
 - KL-divergence decreases steadily, confirming that the custom model is aligning its output distribution to GPT-2's.
 - However, many of the outputs for both Native Sparse Attention and the Performer are not coherent, with outputs that are gibberish.
 - We did not measure or improve memory usage—the code as written does not yet aim for sub-quadratic complexity or large-scale efficiency gains.
-
-### Evidence your implementation works
-
-- **Successful Training Loop:** Over 100 epochs, the KL-divergence–based loss with the custom NSA attention layer decreased from about TODO down to TODO on our dataset, and the custom Performer-based attention layer decreased from TODO down to TODO on our dataset, indicating the custom attention can begin mimic the reference model's distributions.
-- **Text Generation:** We tested with a few prompts, observing that our custom model produced text. The text is not as coherent as the reference model though.
 
 ### Test case results
 
@@ -144,20 +138,24 @@ Custom: Artificial intelligence!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #### Performer
 
+Prompt: The future of artificial intelligence
+Reference: The future of artificial intelligence is likely to be uncertain, but we believe that it will have a huge impact on the way people think and interact with our world. The fact that Google's business has been growing at this rate means there are plenty more opportunities
+Custom: The future of artificial intelligence are not, the two sides with those who is probably also in 2008-bef I say it was only five miles away.
+That for other aspects of a little bit less than an old and there were so that he
+
 Prompt: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers
 Reference: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers—the Arkion crew made it to hyperspace in January 3160 – was launched from this world's barren wasteland
-Custom: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers When we are a few 1). We have only then to help: Rascal\'1-s at school ------------------------------------------------------------------------
+Custom: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers When we are a few 1). We have only then to help: Rascal\'1-s at school
 
 ### Current Limitations
 
 - **Minimal Dataset**: Synthetic or small text corpora, offering limited insight into real-world performance (we only use 1000 training samples).
-- **Limited Mask Optimization**: We used a simple weighted linear combination of attention masks that attend to tokens in specific positions.
+- **Limited Training**: Currently our NSA implementation only train for 10 epochs and the Performer implementations trains for 50 epochs.
 - **No Large Model**: GPT-2 was used purely for demonstration; we have not tested on bigger or more modern architectures.
 
 ### Resource Usage Measurements
 
-- On one T4 GPU on Google Colab, this took a while to run for 100 epochs (about 30 mins).
-- These resource measurements are modest because our demonstration used a restricted sequence length and a small amount of data.
+- On one T4 GPU on Google Colab, this took a while to run for the current number of epochs (~30 minutes). These resource measurements are modest because our demonstration used a restricted sequence length and a small amount of data.
 
 ### Unexpected challenges
 
@@ -172,9 +170,10 @@ Custom: In the year 2157, humanity had finally perfected interstellar travel. Th
 - **Extend Training Data:** Use the full WikiText-2 dataset (rather than just 1000 samples) to get more realistic coverage and reduce overfitting.
 - **Fine-Tune Hyperparameters:** Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
 - **Efficiency and Memory Improvement:** Track speed and memory usage of attention masks.
+
 - **Attention Restructuring for NSA**: adjust implementation so that words are produced instead of repetitive symbols
-- **Fix Performer Implementation**: Fully flush out Performer implementation
-- **Add Kerformer Implementation**: Add Kerformer implementation and compare with previous methods.
+- **Fix Performer Implementation**: fully flush out Performer implementation
+- **Add Kerformer Implementation**: add Kerformer implementation and compare with previous methods
 
 ### What You've Learned So Far
 
