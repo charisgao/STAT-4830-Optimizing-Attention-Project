@@ -138,14 +138,28 @@ Custom: Artificial intelligence!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #### Performer
 
+Prompt: Hello, my name is
+Reference: Hello, my name is Kipi (I think of you as his friend) and I'm looking for a new job at the company. My only problem with your application was that there were no applications from other employees so we had to come back
+Custom: Hello, my name is to the city of a big and his personal information that he were in an important. The White House (20 on this time during their new equipment or we have been seen as much for free , 5 years ago because it was
+
 Prompt: The future of artificial intelligence
-Reference: The future of artificial intelligence is likely to be uncertain, but we believe that it will have a huge impact on the way people think and interact with our world. The fact that Google's business has been growing at this rate means there are plenty more opportunities
-Custom: The future of artificial intelligence are not, the two sides with those who is probably also in 2008-bef I say it was only five miles away.
-That for other aspects of a little bit less than an old and there were so that he
+Reference: The future of artificial intelligence will involve creating a machine with the ability to solve complex problems and problem-solving skills that can be learned over time, by making choices based on which data is kept nearby.
+"What we hope for now are two
+Custom: The future of artificial intelligence and the new on the current I didn't often, if you will also seen a few days as well believed that they were not to prevent his wife. The other teams around in order from this at home for him out some
+
+Prompt: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars
+Reference: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars.
+There was no time to reflect on what had just happened and decided that it would be best if we move
+Custom: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars and even as their first time to look at least half- in 1
+The original creation was also has been killed
 
 Prompt: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers
-Reference: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers—the Arkion crew made it to hyperspace in January 3160 – was launched from this world's barren wasteland
-Custom: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers When we are a few 1). We have only then to help: Rascal\'1-s at school
+Reference: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers was constructed at Columbia University in New York State (now Stony Brook). Once again it became clear that humans were
+Custom: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers to be so important or in his body but were not believed that such a few days is also released this will never
+
+Prompt: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation
+Reference: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation and experiments using a small amount of mercury in its juice, she was confident that any results would be conclusive enough to bring their use
+Custom: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation in particular were not be considered for a few days and I was his name is an excellent work (s or one year around The
 
 ### Current Limitations
 
@@ -155,7 +169,7 @@ Custom: In the year 2157, humanity had finally perfected interstellar travel. Th
 
 ### Resource Usage Measurements
 
-- On one T4 GPU on Google Colab, this took a while to run for the current number of epochs (~30 minutes). These resource measurements are modest because our demonstration used a restricted sequence length and a small amount of data.
+- On one T4 GPU on Google Colab, this took a while to run for the current number of epochs (~1 hr). These resource measurements are modest because our demonstration used a restricted sequence length and a small amount of data.
 
 ### Unexpected challenges
 
