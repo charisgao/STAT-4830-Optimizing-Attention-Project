@@ -65,7 +65,7 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 ![Native Sparse Attention Diagram](./figures/NSA_structure.png)
 
-- **Performer**: Performers TODO
+- **Performers and Kerformers**: These use kernel-based approximations to replace softmax attention, reducing complexity to linear time. Performers rely on random feature maps, while Kerformers improve this with structured, data-aware projections that are learned—making both efficient for long-sequence modeling without major accuracy loss.
 
 ### PyTorch Implementation Strategy
 
@@ -73,7 +73,7 @@ summed over all training examples $X$. This objective encourages the custom atte
 2. **Custom Attention Module**: Replace the default attention with a mechanism that only processes a subset of tokens, with learnable parameters dictating which tokens matter most. We also experiment using techniques from NSA or the Performer in the custom attention module.
 
 - Native Sparse Attention: implement hierarchical attention with compressed tokens, selective attention, and sliding window with a GPT2 model
-- Performer: TODO
+- Performer: implement a Performer using the base GPT2 model, replacing the attention layer with a kernel-based linear attention module (e.g., FAVOR+, and potentially later causal FAVOR+).
 
 3. **Loss Computation**: Compute logits from both models on the same input batch, then apply KL-divergence.
 4. **Parameter Updates**: Use standard optimization (e.g., AdamW) to train the new attention module while freezing or partially freezing other layers.
@@ -101,8 +101,6 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 - We plan to use a GPU for training and validation on WikiText-2. We will be utilizing Google Cloud for access to more powerful GPUs and TPUs, utilizing the provided credit.
 
----
-
 ## Results
 
 ### Native Sparse Attention
@@ -116,43 +114,20 @@ We could not find an official implementation of NSA by DeepSeek researchers. In 
 ### Performer
 
 TODO
+We ran into issues implementing the Performer as a replacement for the attention in GPT2, and are still working on fixing the issues. However, with one implementation that seems to work, we do get intelligible output, albeit not the best. The loss does decrease to zero, but we do want to measure the speed and accuracy better in the future.
 
 In the future, we intend to extend these approaches to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization, penalty, and/or constraints (eg. low rank using SVD) to reduce complexity. We also want to test with both more advanced models beyond GPT-2, and additionally smaller models than can be run locally.
 
 **Key Observations**
 
 - KL-divergence decreases steadily, confirming that the custom model is aligning its output distribution to GPT-2's.
-- HOWEVER, many of the outputs for both Native Sparse Attention and the Performer are not coherent, with outputs that are gibberish.
+- However, many of the outputs for both Native Sparse Attention and the Performer are not coherent, with outputs that are gibberish.
 - We did not measure or improve memory usage—the code as written does not yet aim for sub-quadratic complexity or large-scale efficiency gains.
 
 ### Evidence your implementation works
 
 - **Successful Training Loop:** Over 100 epochs, the KL-divergence–based loss with the custom NSA attention layer decreased from about TODO down to TODO on our dataset, and the custom Performer-based attention layer decreased from TODO down to TODO on our dataset, indicating the custom attention can begin mimic the reference model's distributions.
 - **Text Generation:** We tested with a few prompts, observing that our custom model produced text. The text is not as coherent as the reference model though.
-- **Convergence of Attention Masks Coefficients:** Below are graphs of the values of the coefficients of the attention masks for the Performer TODO.
-
-![Attention Block 0](./figures/week7_report_attention_block0.png)
-![Attention Block 4](./figures/week7_report_attention_block4.png)
-![Attention Block 8](./figures/week7_report_attention_block8.png)
-![Attention Block 11](./figures/week7_report_attention_block11.png)
-
-_Figure: Evolution of attention mask coefficients during training. Each line represents a coefficient for a different attention pattern. The convergence of these values suggests the model is learning stable attention patterns._
-
-### Basic performance metrics
-
-TODO
-Here are the loss values (KL-divergence + L1 penalty) across epochs (only partial data shown):
-
-```
-Epoch 1 | Loss: 2.1443
-Epoch 20 | Loss: 0.6724
-Epoch 40 | Loss: 0.5075
-Epoch 60 | Loss: 0.4362
-Epoch 80 | Loss: 0.4266
-Epoch 90 | Loss: 0.4021
-```
-
-The consistent downward trend demonstrates that the custom attention mechanism aligns progressively better with the baseline.
 
 ### Test case results
 
@@ -166,6 +141,12 @@ Custom: [Artificial intelligence]""%&&&(&&,&&&0&0,0&,000&00&00000000000000000&00
 
 Reference: Artificial intelligence is a new field of research that has been in the works for a while now.
 Custom: Artificial intelligence!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#### Performer
+
+Prompt: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers
+Reference: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers—the Arkion crew made it to hyperspace in January 3160 – was launched from this world's barren wasteland
+Custom: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers When we are a few 1). We have only then to help: Rascal\'1-s at school ------------------------------------------------------------------------
 
 ### Current Limitations
 
@@ -184,8 +165,6 @@ Custom: Artificial intelligence!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 - **Overfitting**: Because our dataset was tiny, we saw the model quickly saturate or jump around in text quality, suggesting the need for better regularization.
 - **Accuracy Concerns**: Potential accuracy degradation from over-sparsification.
 
----
-
 ## Next Steps
 
 ### Immediate improvements needed
@@ -194,12 +173,8 @@ Custom: Artificial intelligence!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 - **Fine-Tune Hyperparameters:** Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
 - **Efficiency and Memory Improvement:** Track speed and memory usage of attention masks.
 - **Attention Restructuring for NSA**: adjust implementation so that words are produced instead of repetitive symbols
-
-### Literature review
-
-We conducted a literature review of two papers: "Lexico: Extreme KV Cache Compression via Sparse Coding Over Universal Dictionaries" and "Native Sparse Attention (NSA): A Hardware-Aligned and Trainable Sparse Attention Mechanism", which discuss optimizations to improve model memory usage. (detailed summary in `papers/`.) Lexico uses a KV cache compression technique that leverages sparse coding to represent key-value pairs using a small set of learned universal dictionary vectors. NSA introduces a sparse attention mechanism that incorporates predefined sparsity patterns directly into model training. The approach defines sparse attention templates that match modern hardware capabilities, ensuring both algorithmic and hardware efficiency.These techniques represent complementary approaches to addressing the memory bottlenecks in LLMs: Lexico focuses on compressing the stored intermediate states, while NSA optimizes the attention computation itself.
-
-We will consider further exploring or finding ways to imitiate what these papers have done for their attention mechanism as suggestions for our next steps.
+- **Fix Performer Implementation**: Fully flush out Performer implementation
+- **Add Kerformer Implementation**: Add Kerformer implementation and compare with previous methods.
 
 ### What You've Learned So Far
 
