@@ -57,3 +57,15 @@ Prof. Davis mentioned that a DeepSeek paper came out today (https://arxiv.org/ab
 ### Weighted Combination of Attention Masks
 
 We replaced the learnable weighted linear combination of three candidate masks with five candidate masks: attend to the last token, 2nd to last token, 3rd to last token, 4th to last token, and 5th to last token. We also conducted experiments exploring the effects of the L1 penalty and attempted to tune the hyperparameter of how much L1 penalty to apply. Our next step will be including even more candidate masks in the linear combination and also looking into more state of the art approaches towards this attention problem.
+
+## Week 8 - Midterm Presentation
+
+### 3/6 Meeting with Prof. Davis
+
+Prof. Davis gave us feedback from our midterm presentation. Regarding the presentation itself, he mentioned that visualizations throughout would help, such as showing what attention masks look like, what transformers look like, and displaying the key mathematical formulas as formulas. With our implementation so far, he recommended exploring the context length and the bottleneck to see how long should our context actually be? He also explained kernels and how we could use kernels to optimize the attention mechanism. Instead of forming the query and key from some weight matrix, we could learn a neural network and use that for self attention.
+
+## Week 9
+
+### Implementing Kerformers and NSA
+
+Instead of continuing with learning weighted combinations of attention masks, we decided to explore other more current methods of improving the self attention mechanism. Kerformers use a linear transformer based on a kernel function with a nonlinear reweighting mechanism to make attention a featured-based dot product. NSA is part of our previous literature review, and a state of the art approach that uses a sparse attention mechanism that incorporates predefined sparsity directly into model training. We aimed to implement both of these approaches.
