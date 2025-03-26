@@ -9,7 +9,7 @@ style: |
 
 # Optimizing Attention Mechanisms in Transformers
 
-#### Lightning Talk
+#### Week 10: Project Overview and Results
 
 Chandler Cheung, Charis Gao, Jordan Hochman
 
@@ -46,27 +46,18 @@ $$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} \,\|\, P_{\text{custom}}\bigr)$
 
 ---
 
-## Current Implementation
+## Implementation
 
 - Baseline model: GPT-2 (unoptimized attention mechanism)
-- Custom attention module: linear combination of candidate masks
-  - Learnable weight parameters w/ L1 penalty (independent for each transformer block/layer)
 - Dataset: WikiText-2
-
-```python
-def forward(self, hidden_states, attention_mask=None, **kwargs):
-    ...
-    candidate_masks = self._get_candidate_masks(seq_length, device=device)
-    ...
-    w = torch.sigmoid(self.alpha)
-    ...
-    final_mask = torch.sum(w * candidate_masks, dim=2)
-    ...
-```
+- Custom attention module:
+  1. Naive linear combination of candidate masks with learnable weight parameters and L1 penalty
+  2. Performer/Kerformer -- kernel approximation of attention mechanism with random feature maps
+  3. Native Sparse Attention -- hierarchical attention mechanism with a sliding window
 
 ---
 
-## Current Implementation
+## Implementation
 
 - Loss Computation
   - Compute logits from both models on the same input batch
@@ -87,17 +78,53 @@ def kl_divergence_loss(logits_custom, logits_ref, mask):
 
 ---
 
-## Current Results - Training Progress
+## Naive Linear Combination of Candidate Masks
 
-- Over 100 epochs, loss (KL-divergence) decreased from 2.1470 to 0.3881 on our dataset
-  - Custom attention can mimic the reference model's distributions
-  - Model successfully learns sparse attention pattern
-- Tested with a few prompts, resulting in output text mimicing style similar to GPT-2, though often less coherent due to the limited context
-- L1 regularization experiment: replaced attention layer with 2 possible candidate masks: first token and all tokens (fill attention)
+- Simple weighted linear combinations of 3-5 fixed candidate masks (eg. past 5 tokens, past 10 tokens, one-hot encoding of tokens, etc.)
+- Coefficients are tunable parameters
+- L1 penalty so coefficients are not extremely large and so that we can interpret which attention masks are significant
 
 ---
 
-## Current Results - Attention Masks Coefficients Convergence
+## Performers and Kerformers
+
+- Use kernel-based approximations to replace softmax attention, reducing complexity to linear time
+- **Performers** rely on random feature maps, while **Kerformers** improve this with structured, data-aware projections that are learned—making both efficient for long-sequence modeling without major accuracy loss
+
+---
+
+## Native Sparse Attention
+
+- Hardware-optimized and end-to-end trainable sparse attention mechanism that reduces computational overhead through a hierarchical approach
+- Organizes tokens into compressed representations for global context, selectively retains the most relevant tokens for local precision, and employs a sliding window mechanism to maintain continuity in processing
+
+---
+
+## Native Sparse Attention
+
+![width:1130px](./figures/NSA_structure.png)
+
+---
+
+## Current Results - Naive Linear Combination
+
+- Over 100 epochs, loss decreased from 2.1470 to 0.3881
+  - Custom attention can mimic the reference model's distributions
+- Tested with a few prompts, resulting in output text mimicing style similar to GPT-2 (follows prompts + produces recognizable words), though often drifts/is less coherent due to the limited context
+
+```
+Prompt: Hello, my name is
+Reference: Aaron. It took just weeks of work to get this script ...
+Custom: in German; "Wulf," which means a new kind of word ...
+
+Prompt: The meaning of life is
+Reference: different when it comes to death. It involves the beginning and end ...
+Custom: not a question, however many people are involved in this matter ...
+```
+
+---
+
+## Current Results - Naive Linear Combination Attention Masks Coefficients Convergence
 
 ![width:330px height:231px](./figures/week7_report_attention_block0.png) ![width:330px height:231px](./figures/week7_report_attention_block4.png) ![width:330px height:231px](./figures/week7_report_attention_block11.png)
 
@@ -105,45 +132,56 @@ Graphs of evolution of attention mask coefficients during training. Each line re
 
 ---
 
-## Current Results - Sample Outputs
+## Current Results - Performer/Kerformer
+
+- Work in progress
+- Trained for 10 epochs, loss decreased from 3.2546 to 2.9471
+- Generated outputs consist of non-coherent English text
+- Issues with NaN, infinity, and division by zero, possibly because of overflow/underflow; addressed by adding small epsilons
 
 ```
 Prompt: Hello, my name is
+Reference: Kipi (I think of you as his friend) and I'm looking for a new job at the company ...
+Custom: to the city of a big and his personal information that he were in an important ...
 
-Reference: Aaron. It took just weeks of work to get this script ...
-Custom: in German; "Wulf," which means a new kind of word ...
+Prompt: The future of artificial intelligence
+Reference: will involve creating a machine with the ability to solve complex problems ...
+Custom: and the new on the current I didn't often, if you will also seen a few days  ...
 ```
-
-```
-Prompt: The meaning of life is
-
-Reference: different when it comes to death. It involves the beginning and end ...
-Custom: not a question, however many people are involved in this matter ...
-```
-
-- Custom model's outputs sometimes drift or become less coherent
-- Follows prompts and produce recognizable English words
-- Custom model captures some of GPT-2's output token distribution
 
 ---
 
-## Current Limitations
+## Current Results - NSA
 
-- Limited mask optimization
-  - Currently using simple weighted linear combinations of 3-5 fixed attention masks
+- Work in progress
+- Trained for 10 epochs, loss decreased from TODO
+- Generated outputs consist of random symbols
+- Attempted to address these by increasing the context size and modifying the parameters for the selective attention and sliding window mechanisms; new results still yielded outputs of only !
+
+```
+Prompt: Artificial intelligence
+Reference: is a new field of research that has been in the works for a while now ...
+Custom: %&&&(&&,&&&0&0,0&,000&00&00000000000000000&0000,0&000,0,0&[0000000&000[00[0&0,0 ...
+Custom: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  ...
+```
+
+---
+
+## Current Limitations and Direct Next Steps
+
+- Modify/debug implementation of Performer/Kerformer and NSA so that coherent English words are produced --> currently accuracy concerns / limited coherence
 - Need to train on larger dataset for more epochs
-- No measure of memory or speed usage
 
 ---
 
-## Next Steps
+## Further Steps
 
-- Optimize over more varied candidate masks and matrix families
+- No measure of memory or speed usage
+- Experiment with regularization, penalty, and/or constraints
 - Testing models other than GPT2
-- Extend to full WikiText-2 dataset / more training data
+- Test with different training datasets
 - Measure memory usage and speed improvements
 - Optimize hyperparameters
-- We've conducted a literature review of recent developments in optimizations that affect attention (i.e. Lexico, NSA), considering trying to implement these / finding ways to imitate these papers
 
 ---
 
