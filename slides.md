@@ -95,12 +95,15 @@ def kl_divergence_loss(logits_custom, logits_ref, mask):
 
 ## Native Sparse Attention
 
-- Hardware-optimized and end-to-end trainable sparse attention mechanism that reduces computational overhead through a hierarchical approach
-- Organizes tokens into compressed representations for global context, selectively retains the most relevant tokens for local precision, and employs a sliding window mechanism to maintain continuity in processing
+- Hardware-optimized and end-to-end trainable sparse attention mechanism
+- Reduces computational overhead using hierarchical approach
+  - Compressed representations of tokens for global context
+  - Selectively retains the most relevant tokens for local precision
+  - Employs a sliding window mechanism to maintain continuity in processing sequential tokens
 
 ---
 
-## Native Sparse Attention
+## Native Sparse Attention - Diagram
 
 ![width:1130px](./figures/NSA_structure.png)
 
@@ -154,9 +157,9 @@ Custom: and the new on the current I didn't often, if you will also seen a few d
 ## Current Results - NSA
 
 - Work in progress
-- Trained for 10 epochs, loss decreased from TODO
+- Trained for 10 epochs, loss decreased from 15.28 to 14.18
 - Generated outputs consist of random symbols
-- Attempted to address these by increasing the context size and modifying the parameters for the selective attention and sliding window mechanisms; new results still yielded outputs of only !
+- Attempted to address these by increasing the context size and modifying the parameters for the selective attention and sliding window mechanisms; new results still yielded outputs of only `!`
 
 ```
 Prompt: Artificial intelligence
