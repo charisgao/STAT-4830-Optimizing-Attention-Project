@@ -50,9 +50,9 @@ $$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} \,\|\, P_{\text{custom}}\bigr)$
 
 - Baseline model: GPT-2 (unoptimized attention mechanism)
 - Dataset: WikiText-2
-- Custom attention module:
+- Custom attention module versions:
   1. Naive linear combination of candidate masks with learnable weight parameters and L1 penalty
-  2. Performer/Kerformer -- kernel approximation of attention mechanism with random feature maps
+  2. Performer & Kerformer -- kernel approximation of attention mechanism with random and learned feature maps respectively
   3. Native Sparse Attention -- hierarchical attention mechanism with a sliding window
 
 ---
@@ -137,10 +137,16 @@ Graphs of evolution of attention mask coefficients during training. Each line re
 
 ## Current Results - Performer/Kerformer
 
-- Work in progress
+<style scoped>
+section {
+  font-size: 30px;
+}
+</style>
+
+- Work in progress - generates non-coherent English text
 - Trained for 10 epochs, loss decreased from 3.2546 to 2.9471
-- Generated outputs consist of non-coherent English text
-- Issues with NaN, infinity, and division by zero, possibly because of overflow/underflow; addressed by adding small epsilons
+- Issues with NaN and division by zero, possibly because of overflow/underflow; addressed by adding small epsilons
+    - Implemented by minimizing KL-divergence with base model, but Performers don't add parameters, so it should directly minimize target loss
 
 ```
 Prompt: Hello, my name is
