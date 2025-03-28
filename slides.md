@@ -146,7 +146,7 @@ section {
 - Work in progress - generates non-coherent English text
 - Trained for 10 epochs, loss decreased from 3.2546 to 2.9471
 - Issues with NaN and division by zero, possibly because of overflow/underflow; addressed by adding small epsilons
-    - Implemented by minimizing KL-divergence with base model, but Performers don't add parameters, so it should directly minimize target loss
+  - Implemented by minimizing KL-divergence with base model, but Performers don't add parameters, so it should directly minimize target loss
 
 ```
 Prompt: Hello, my name is
