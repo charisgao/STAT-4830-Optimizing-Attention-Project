@@ -113,14 +113,14 @@ We could not find an official implementation of NSA by DeepSeek researchers. In 
 
 ### Performer
 
-We ran into issues implementing the Performer as a replacement for the attention in GPT2, and are still working on fixing the issues. Specifically for our implementation, we use FAVOR+ to map Q and K to a different space using random projections. However, we face a few issues with NaN and infinity values, possibly because of overflow/underflow. There were also issues with division by zero, so we explored various epsilon values. With all of these additions, we do get some sort of output, albeit not the best.
+In the Performer implementation, we replace the original attention layer in GPT2 with a Performer attention that uses FAVOR+ to map Q and K to a different space using random projections. We faced issues with NaN and infinity values previously, possibly because of overflow/underflow, as well as with division by 0. We were able to resolve many of these by normalizing the data `x_norm = x / math.sqrt(self.head_dim)` or the query/key projections. With these changes, we saw the KL divergence steadily decrease from 3.1287 to 2.2994 over 50 epochs. However, the new results still yielded outputs that were not very coherent, though the performance was significantly improved over past results.
 
 In the future, we intend to extend both these approaches to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization, penalty, and/or constraints (eg. low rank using SVD) to reduce complexity. We also want to test with both more advanced models beyond GPT-2, and additionally smaller models than can be run locally.
 
 **Key Observations**
 
 - KL-divergence decreases steadily, confirming that the custom model is aligning its output distribution to GPT-2's.
-- However, many of the outputs for both Native Sparse Attention and the Performer are not coherent, with outputs that are gibberish.
+- However, many of the outputs for both Native Sparse Attention and the Performer are not coherent or clearly lacking compared to GPT2.
 - We did not measure or improve memory usage—the code as written does not yet aim for sub-quadratic complexity or large-scale efficiency gains.
 
 ### Test case results
@@ -139,33 +139,20 @@ Below are selected generation samples using the same prompts for both the refere
 
 #### Performer
 
-**Prompt**: Hello, my name is
+**Prompt**: In a shocking turn of events,
 
-- **Reference**: Hello, my name is Kipi (I think of you as his friend) and I'm looking for a new job at the company. My only problem with your application was that there were no applications from other employees so we had to come back
-- **Custom**: Hello, my name is to the city of a big and his personal information that he were in an important. The White House (20 on this time during their new equipment or we have been seen as much for free , 5 years ago because it was
+- **Reference**: In a shocking turn of events, on 2 August last year he was arrested for the murder of two people in his flat. The victims were aged 21 and 22; both men are now dead...
+- **Custom**: In a shocking turn of events, and to get drunk as well with little girls in the night before entering its relationship between friends who became an investigation. However much like their past...
 
 **Prompt**: The future of artificial intelligence
 
-- **Reference**: The future of artificial intelligence will involve creating a machine with the ability to solve complex problems and problem-solving skills that can be learned over time, by making choices based on which data is kept nearby.
-  "What we hope for now are two
-- **Custom**: The future of artificial intelligence and the new on the current I didn't often, if you will also seen a few days as well believed that they were not to prevent his wife. The other teams around in order from this at home for him out some
+- **Reference**: The future of artificial intelligence will involve creating a machine with the ability to solve complex problems and problem-solving skills that can be learned over time, by making choices based on which data is kept nearby...
+- **Custom**: The future of artificial intelligence service, in the first instance; that both sides because there is a particular to be used for those who could not only one's power. Some are always have been very well-ease and his ability , it was at...
 
 **Prompt**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars
 
-- **Reference**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars.
-  There was no time to reflect on what had just happened and decided that it would be best if we move
-- **Custom**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars and even as their first time to look at least half- in 1
-  The original creation was also has been killed
-
-**Prompt**: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers
-
-- **Reference**: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers was constructed at Columbia University in New York State (now Stony Brook). Once again it became clear that humans were
-- **Custom**: In the year 2157, humanity had finally perfected interstellar travel. The first colony ship, brimming with hope and thousands of eager settlers to be so important or in his body but were not believed that such a few days is also released this will never
-
-**Prompt**: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation
-
-- **Reference**: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation and experiments using a small amount of mercury in its juice, she was confident that any results would be conclusive enough to bring their use
-- **Custom**: The scientist stared at the glowing vial on the laboratory table, her fingers trembling with anticipation. After years of relentless experimentation in particular were not be considered for a few days and I was his name is an excellent work (s or one year around The
+- **Reference**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars. He was alone but in darkness for a moment before he heard his brother's cries and saw him pass by it...
+- **Custom**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars around a temple. The second floor which is still standing right and that has an ancient Egyptian tomb , so it was...
 
 ### Current Limitations
 
