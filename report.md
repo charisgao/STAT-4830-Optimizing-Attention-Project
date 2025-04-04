@@ -105,11 +105,13 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 ### Native Sparse Attention
 
-In our implementation of Native Sparse Attention, we manually created a hierarchical attention layer that incorporates compressed tokens, selective attention, and a sliding window mechanism using PyTorch. This approach aimed to optimize the attention computation by reducing the number of tokens processed while maintaining the model's performance. We trained the model for 10 epochs using 50% of the WikiText-2 dataset as our training data. However, the initial results were disappointing, as the generated outputs consisted of random symbols rather than coherent text.
+In our implementation of Native Sparse Attention, we initially tried manually created a hierarchical attention layer that incorporates compressed tokens, selective attention, and a sliding window mechanism using PyTorch. This approach aimed to optimize the attention computation by reducing the number of tokens processed while maintaining the model's performance. We trained the model for 10 epochs using 50% of the WikiText-2 dataset as our training data. However, the initial results were disappointing, as the generated outputs consisted of random symbols rather than coherent text.
 
 To address these issues, we adjusted the implementation by increasing the context size and modifying the parameters for both the selective attention and sliding window mechanisms. Despite these changes, the new results still yielded outputs that entirely comprised exclamation points, indicating that the model was not effectively learning meaningful patterns in the data.
 
-We could not find an official implementation of NSA by DeepSeek researchers. In our search for improvement, we found a library implementation of Native Sparse Attention by Philip Wang at Observe.AI and attempted to integrate it into our pipeline. However, we encountered challenges related to the return type and value of the forward method within the attention class. This issue rendered the model unable to generate coherent text, although it successfully completed the training loop. It remains unclear whether the model has learned anything meaningful or if the outputs are simply gibberish. Notably, the KL divergence loss has been decreasing with each epoch, suggesting some level of learning is occurring, but the quality of the generated text remains a significant concern.
+We could not find an official implementation of NSA by DeepSeek researchers. In our search for improvement, we found a library implementation of Native Sparse Attention by Philip Wang et al. at Observe.AI and attempted to integrate it into our pipeline. He developed the [native-sparse-attention-pytorch](https://github.com/lucidrains/native-sparse-attention-pytorch) open-sourced library of sparse attention pattern. They implemented CUDA kernel hacking, single transformer-based compression network, and included compression block hyperparameters. 
+
+We fixed our previous errors in tensor misalignment and generating output next. We ran our optimization algorithm for 5 epochs, given our current compute restraint. Notably, the KL divergence loss has been decreasing with each epoch, suggesting some level of learning is occurring. Initially, the loss was 331.665, but decreased to 175.68 after 8 epochs. We will run this pipeline for more epochs in the future. Below are sample output texts with the NSA implementation.
 
 ### Performer
 
@@ -125,17 +127,25 @@ In the future, we intend to extend both these approaches to **measure the comput
 
 ### Test case results
 
-Below are selected generation samples using the same prompts for both the reference and custom models. The custom model's outputs are not very coherent, but for Performer they still produce recognizable English words. This shows the model is capturing some of GPT-2's distribution, though lots of improvements can still be made.
+Below are selected generation samples using the same prompts for both the reference and custom models. With more epochs, we see that the custom model's outputs become more coherent, but they eventually divulge into gibberish. This is most likely due to limited context length and a small initial training loop of 5 epochs.
+
+For Performer they still produce recognizable English words. This shows the model is capturing some of GPT-2's distribution, though lots of improvements can still be made.
 
 #### Native Sparse Attention
 
 **Prompt**: Artificial intelligence
 
-- **Reference**: [Artificial intelligence] is a new field of research that has been in the works for a while now.
-- **Custom**: [Artificial intelligence]""%&&&(&&,&&&0&0,0&,000&00&00000000000000000&0000,0&000,0,0&[0000000&000[00[0&0,0[0[0000&[00[,[0[000
+**After 2 epochs:**
+- **Reference**: [Artificial intelligence] has always been a topic of debate. Many of these debates have been about how to make AI intelligible. The problem is that AI cannot understand abstract concepts.
+- **Custom**: [Artificial intelligence] "I " to write a "the, " is thought too " or " is " a " " " I " " " " " "" " " " " " "We " " " " "the " " " " " " "
 
-- **Reference**: Artificial intelligence is a new field of research that has been in the works for a while now.
-- **Custom**: Artificial intelligence!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+**After 4 epochs:**
+- **Reference**: Artificial intelligence may not necessarily be a good thing for the American public. As we've reported elsewhere, there are many positive benefits to AI for the public sector. For example, many people are happy about the way AI works.
+- **Custom**: Artificial intelligence to say a new standard decision to keep their "to-pamarimimimimz, S.Nxdbhhhar's , and (in , S.G. , and (M , and M.ANN
+
+**After 5 epochs:**
+- **Reference**: Artificial intelligence is the key to the future, but it may also be the key to the future with its ability to detect, investigate and manage complex patterns of action. Some scientists, for example, have proposed that artificial intelligence could be the next big thing.
+- **Custom**: Artificial intelligence, will not pay those that they were the most common people could be understood with other other other two-tetetetetetetetetetetetetetetetetetetetetetetetetetetete
 
 #### Performer
 
@@ -157,7 +167,7 @@ Below are selected generation samples using the same prompts for both the refere
 ### Current Limitations
 
 - **Minimal Dataset**: Synthetic or small text corpora, offering limited insight into real-world performance (we only use 1000 training samples).
-- **Limited Training**: Currently our NSA implementation only train for 10 epochs and the Performer implementations trains for 50 epochs.
+- **Limited Training**: Currently our NSA implementation only train for 5 epochs and the Performer implementations trains for 50 epochs.
 - **No Large Model**: GPT-2 was used purely for demonstration; we have not tested on bigger or more modern architectures.
 
 ### Resource Usage Measurements
@@ -178,7 +188,7 @@ Below are selected generation samples using the same prompts for both the refere
 - **Fine-Tune Hyperparameters:** Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
 - **Efficiency and Memory Improvement:** Track speed and memory usage of attention masks.
 
-- **Attention Restructuring for NSA**: adjust implementation so that words are produced instead of repetitive symbols
+- **Attention Restructuring for NSA**: train NSA model longer and fix incoherent context later in the sentence generation
 - **Fix Performer Implementation**: fully flush out Performer implementation
 - **Add Kerformer Implementation**: add Kerformer implementation and compare with previous methods
 
