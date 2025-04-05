@@ -2,7 +2,7 @@
 
 ## **OBSERVE**
 
-Reading through the report, we notice it has a strong theoretical foundation and we have conducted a good literature review of ways to improve the attention mechanism, but our project is lacking in terms of implementation and results. There are still improvements to be made in both the NSA and Performer and the completions to the prompts are also definitely not as coherent as the reference response, suggesting more exploration should be done with hyperparameters finetuning the NSA and Performer implementations.
+Reading through the report, we notice it has a strong theoretical foundation and we have conducted a good literature review of ways to improve the attention mechanism, but our project is lacking in terms of implementation and results. There are still improvements to be made in both the NSA and Performer and the completions to the prompts are also definitely not as coherent as the reference response, suggesting more exploration should be done with hyperparameter finetuning the NSA and Performer implementations.
 
 ## **ORIENT**
 
@@ -17,7 +17,7 @@ Reading through the report, we notice it has a strong theoretical foundation and
 - No actual memory or computational efficiency measurements
 - Lack of comparison between baseline and custom model
 - Limited context window for GPT-2
-- Not completely functional NSA and Performer implementations.
+- No functional Kerformer implementation
 
 ### Critical Risks/Assumptions
 
@@ -29,7 +29,8 @@ We assume the approach of using NSA and Performer will yield meaningful improvem
 
 - Implement and execute memory/computation benchmarks comparing baseline and custom attention (using torch.cuda.max_memory_allocated() as described in the approach)
 - Create visualization comparing attention patterns between baseline and custom models to demonstrate what the model is actually learning
-- Fix model with NSA attention, fix model with Performer attention, and implement model with Kerformer attention
+- Fix context length issues in NSA implementation, and finish Kerformer implementation
+- Empirically compare all the created models
 
 ## **ACT**
 
