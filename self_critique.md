@@ -17,17 +17,18 @@ Reading through the report, we notice it has a strong theoretical foundation and
 - No actual memory or computational efficiency measurements
 - Lack of comparison between baseline and custom model
 - Limited context window for GPT-2
+- Relatively high KL-divergence for NSA in particular, also high for Performer (loss not decreasing enough)
 - No functional Kerformer implementation
 
 ### Critical Risks/Assumptions
 
-We assume the approach of using NSA and Performer will yield meaningful improvements based on literature review. However, without actual measurements of memory usage or computation time, we can't verify if this implementation achieves the stated goal of reducing the $O(n^2)$ bottleneck.
+We assume the approach of using NSA/Performer/Kerformer will yield meaningful improvements based on literature review. However, without actual measurements of memory usage or computation time, we can't verify if this implementation achieves the stated goal of reducing the $O(n^2)$ bottleneck.
 
 ## **DECIDE**
 
 ### Concrete Next Actions
 
-- Implement and execute memory/computation benchmarks comparing baseline and custom attention (using torch.cuda.max_memory_allocated() as described in the approach)
+- Implement and execute memory/computation benchmarks comparing baseline and custom attention (using torch.cuda.max_memory_allocated())
 - Create visualization comparing attention patterns between baseline and custom models to demonstrate what the model is actually learning
 - Fix context length issues in NSA implementation, and finish Kerformer implementation
 - Empirically compare all the created models
@@ -36,4 +37,4 @@ We assume the approach of using NSA and Performer will yield meaningful improvem
 
 ### Resource Needs
 
-We just received access to a GPU with sufficient memory to run experiments with longer sequences to train our implementations for more epochs and properly measure efficiency gains. We should also use PyTorch's profiler tools (torch.profiler.profile()) to isolate and measure the attention operations specifically, rather than just overall model performance.
+We received access to a GPU with sufficient memory to run experiments with longer sequences to train our implementations for more epochs and properly measure efficiency gains. We should also use PyTorch's profiler tools (torch.profiler.profile()) to isolate and measure the attention operations specifically, rather than just overall model performance.

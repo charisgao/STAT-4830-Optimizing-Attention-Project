@@ -66,6 +66,18 @@ Prof. Davis gave us feedback from our midterm presentation. Regarding the presen
 
 ## Week 9
 
-### Implementing Kerformers and NSA
+### Implementing Performer and NSA
 
-Instead of continuing with learning weighted combinations of attention masks, we decided to explore other more current methods of improving the self attention mechanism. Kerformers use a linear transformer based on a kernel function with a nonlinear reweighting mechanism to make attention a featured-based dot product. NSA is part of our previous literature review, and a state of the art approach that uses a sparse attention mechanism that incorporates predefined sparsity directly into model training. We aimed to implement both of these approaches.
+Instead of continuing with learning weighted combinations of attention masks, we decided to explore other more current methods of improving the self attention mechanism. Performers use a linear transformer with random feature approximations of the softmax kernel. NSA is part of our previous literature review, and a state of the art approach that uses a sparse attention mechanism that incorporates predefined sparsity directly into model training. We aimed to implement both of these approaches.
+
+## Week 10
+
+### 3/25 Meeting with Prof. Davis
+
+We met with Prof. Davis to discuss our implementations and shift to exploring existing state of the art approaches to addressing quadratic attention. We mentioned difficulties we had with our code, namely lots of NaNs, infinity values, and incoherent output. Prof. Davis responded with how these issues are pretty common and gave us tips to look into. He also described that it wasn't exactly clear what were were optimizing in our approach if we're still using KL divergence, and we mentioned that we wanted to use the Performer / NSA as a replacement for the attention layer in GPT2, and still want similar performance as GPT2.
+
+## Week 11
+
+### Implementing Performer, Kerformer, NSA
+
+We improved on our past implementations of Performer and NSA by debugging and now are able to get more coherent output. For Performer, a key improvement involved standardization, and for NSA, we were able to align the tensors and increase the context length. We also began implementing Kerformer, but ran into some issues.
