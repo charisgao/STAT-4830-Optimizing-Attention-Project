@@ -4,3 +4,6 @@ docs/figures/*
 !docs/figures/*.tex
 
 local/
+
+.DS_Store
+.vscode/
