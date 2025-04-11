@@ -121,7 +121,7 @@ def kl_divergence_loss(logits_custom, logits_ref, mask):
 
 - Over 100 epochs, loss decreased from 2.1470 to 0.3881
   - Custom attention can mimic the reference model's distributions
-- Tested with a few prompts, resulting in output text mimicing style similar to GPT-2 (follows prompts + produces recognizable words), though often drifts/is less coherent due to the limited context
+- Tested with a few prompts, resulting in output text mimicking style similar to GPT-2 (follows prompts + produces recognizable words), though often drifts/is less coherent due to the limited context
 
 ```
 Prompt: Hello, my name is
@@ -181,7 +181,7 @@ two-tetetetetetetetetetetetetetetetetetetetetetetetetetetete  ...
 
 ## Current Limitations and Direct Next Steps
 
-- Standardize all implementations to use same lsos function, optimizer, step size, scheduler, etc.
+- Standardize all implementations to use same loss function, optimizer, step size, scheduler, etc.
 - Modify implementation of Performer so that it doesn't reach noise floor
 - train NSA on larger dataset for more epochs and experiment with context length so that coherent English words are produced --> currently accuracy concerns / limited coherence as well as high loss
 
