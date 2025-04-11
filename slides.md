@@ -53,7 +53,7 @@ $$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} \,\|\, P_{\text{custom}}\bigr)$
 - Custom attention module versions:
   1. Naive linear combination of candidate masks with learnable weight parameters and L1 penalty
   2. Performer -- kernel approximation of attention mechanism with random feature maps
-  3. Native Sparse Attention -- hierarchical attention mechanism with a sliding window
+  3. Native Sparse Attention -- hierarchical attention mechanism with a sliding window and selective attention
 
 ---
 
@@ -166,7 +166,7 @@ Custom: around a temple. The second floor which is still standing right and that
 ## Current Results - NSA
 
 - Work in progress
-- Trained for 8 epochs, loss decreased from 331.665 to 175.68
+- Trained for 5 epochs, loss decreased from 331.665 to 175.68
 - Generated outputs becomes incoherent after a few tokens
 
 ```
@@ -182,7 +182,8 @@ two-tetetetetetetetetetetetetetetetetetetetetetetetetetetete  ...
 ## Current Limitations and Direct Next Steps
 
 - Standardize all implementations to use same lsos function, optimizer, step size, scheduler, etc.
-- Modify implementation of Performer so that it doesn't reach noise floor and train NSA on larger dataset for more epochs so that coherent English words are produced --> currently accuracy concerns / limited coherence as well as high loss
+- Modify implementation of Performer so that it doesn't reach noise floor
+- train NSA on larger dataset for more epochs and experiment with context length so that coherent English words are produced --> currently accuracy concerns / limited coherence as well as high loss
 
 ---
 
