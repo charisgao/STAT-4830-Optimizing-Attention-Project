@@ -80,4 +80,10 @@ We met with Prof. Davis to discuss our implementations and shift to exploring ex
 
 ### Implementing Performer, Kerformer, NSA
 
-We improved on our past implementations of Performer and NSA by debugging and now are able to get more coherent output. For Performer, a key improvement involved standardization, and for NSA, we were able to align the tensors and increase the context length. We also began implementing Kerformer, but ran into some issues.
+We improved on our past implementations of Performer and NSA by debugging and now are able to get more coherent output. For Performer, a key improvement involved standardization, and for NSA, we were able to align the tensors and increase the context length. We also began implementing Kerformer, but ran into some issues with out of GPU and CPU memory.
+
+## Week 12
+
+### 4/8 Meeting with Prof. Davis
+
+We discussed our progress with Prof. Davis. For the Performer, from looking at our loss values, he hypothesized that the KL-divergence doesn't decrease further since we are using a constant step size and hit the noise floor. He recommended that we decrease the learning rate, specifically by exploring the cosine annealing scheduler. Prof. Davis also suggested looking into changing the context length and number of features. For the NSA, he similarly suggested increasing the context length since the output becomes incoherent after a few tokens.

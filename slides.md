@@ -9,7 +9,7 @@ style: |
 
 # Optimizing Attention Mechanisms in Transformers
 
-#### Week 10: Project Overview and Results
+#### Week 12: Project Overview and Results
 
 Chandler Cheung, Charis Gao, Jordan Hochman
 
@@ -52,16 +52,24 @@ $$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} \,\|\, P_{\text{custom}}\bigr)$
 - Dataset: WikiText-2
 - Custom attention module versions:
   1. Naive linear combination of candidate masks with learnable weight parameters and L1 penalty
-  2. Performer & Kerformer -- kernel approximation of attention mechanism with random and learned feature maps respectively
+  2. Performer -- kernel approximation of attention mechanism with random feature maps
   3. Native Sparse Attention -- hierarchical attention mechanism with a sliding window
 
 ---
 
-## Implementation
+## GPT-2
 
-- Loss Computation
-  - Compute logits from both models on the same input batch
-  - Calculate KL-divergence and minimize
+![bg left width:280px](./figures/GPT-2-architecture.png)
+
+- Transformer-based language model built using stacked decoder blocks focused on self-attention
+- Causal masking – each word in a sequence attends to all previous words using scaled dot-product attention
+
+---
+
+## Loss Computation
+
+- Compute logits from both models on the same input batch
+- Calculate KL-divergence and minimize
 
 ```python
 def kl_divergence_loss(logits_custom, logits_ref, mask):
@@ -86,10 +94,10 @@ def kl_divergence_loss(logits_custom, logits_ref, mask):
 
 ---
 
-## Performers and Kerformers
+## Performers
 
-- Use kernel-based approximations to replace softmax attention, reducing complexity to linear time
-- **Performers** rely on random feature maps, while **Kerformers** improve this with structured, data-aware projections that are learned—making both efficient for long-sequence modeling without major accuracy loss
+- Use kernel-based approximations to replace softmax attention– uses FAVOR+ to map Q and K to a different space using random projections (random feature maps)
+- Reduces complexity of attention mechanism to linear time
 
 ---
 
@@ -135,27 +143,22 @@ Graphs of evolution of attention mask coefficients during training. Each line re
 
 ---
 
-## Current Results - Performer/Kerformer
+## Current Results - Performer
 
-<style scoped>
-section {
-  font-size: 30px;
-}
-</style>
-
-- Work in progress - generates non-coherent English text
-- Trained for 10 epochs, loss decreased from 3.2546 to 2.9471
-- Issues with NaN and division by zero, possibly because of overflow/underflow; addressed by adding small epsilons
-  - Implemented by minimizing KL-divergence with base model, but Performers don't add parameters, so it should directly minimize target loss
+- Work in progress - generates coherent English text
+- Trained for 50 epochs, loss decreased from 3.1287 to 2.2994
+- Issues with NaN and division by zero addressed by standardization
 
 ```
-Prompt: Hello, my name is
-Reference: Kipi (I think of you as his friend) and I'm looking for a new job at the company ...
-Custom: to the city of a big and his personal information that he were in an important ...
+Prompt: The meaning of life is
+Reference: that God has created you to live according as he desires. (Deut 4:15.) ...
+Custom: also the use to be, where you can find out. The reason for an individual human beings and one who are a major
+problems with no other than when we're already in some people ...
 
-Prompt: The future of artificial intelligence
-Reference: will involve creating a machine with the ability to solve complex problems ...
-Custom: and the new on the current I didn't often, if you will also seen a few days  ...
+Prompt: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village,
+its warm lights flickering like tiny stars
+Reference: He was alone but in darkness for a moment before he heard his brother's cries and saw him pass by it ...
+Custom: around a temple. The second floor which is still standing right and that has an ancient Egyptian tomb ...
 ```
 
 ---
@@ -163,34 +166,32 @@ Custom: and the new on the current I didn't often, if you will also seen a few d
 ## Current Results - NSA
 
 - Work in progress
-- Trained for 10 epochs, loss decreased from 15.28 to 14.18
-- Generated outputs consist of random symbols
-- Attempted to address these by increasing the context size and modifying the parameters for the selective attention and sliding window mechanisms; new results still yielded outputs of only `!`
+- Trained for 8 epochs, loss decreased from 331.665 to 175.68
+- Generated outputs becomes incoherent after a few tokens
 
 ```
 Prompt: Artificial intelligence
-Reference: is a new field of research that has been in the works for a while now ...
-Custom: %&&&(&&,&&&0&0,0&,000&00&00000000000000000&0000,0&000,0,0&[0000000&000[00[0&0,0 ...
-Custom: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  ...
+Reference: is the key to the future, but it may also be the key to the future with its ability to detect, investigate and
+manage complex patterns of action. Some scientists, for example, have proposed that artificial intelligence could be  ...
+Custom: , will not pay those that they were the most common people could be understood with other other other
+two-tetetetetetetetetetetetetetetetetetetetetetetetetetetete  ...
 ```
 
 ---
 
 ## Current Limitations and Direct Next Steps
 
-- Modify/debug implementation of Performer/Kerformer and NSA so that coherent English words are produced --> currently accuracy concerns / limited coherence
-- Need to train on larger dataset for more epochs
+- Standardize all implementations to use same lsos function, optimizer, step size, scheduler, etc.
+- Modify implementation of Performer so that it doesn't reach noise floor and train NSA on larger dataset for more epochs so that coherent English words are produced --> currently accuracy concerns / limited coherence as well as high loss
 
 ---
 
 ## Further Steps
 
-- No measure of memory or speed usage
-- Experiment with regularization, penalty, and/or constraints
-- Testing models other than GPT2
-- Test with different training datasets
-- Measure memory usage and speed improvements
+- Measure memory usage
 - Optimize hyperparameters
+- Experiment with regularization, penalty, and/or constraints
+- Test with different training datasets
 
 ---
 
