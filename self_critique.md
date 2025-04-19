@@ -16,12 +16,11 @@ Reading through the report, we notice it has a strong theoretical foundation and
 - Output text is less coherent than GPT-2 output text
 - Limited context window for GPT-2
 - Relatively high KL-divergence for NSA in particular, also high for Performer (loss not decreasing enough)
-- No functional Kerformer implementation
 - More detailed comparison between output text between different implementations
 
 ### Critical Risks/Assumptions
 
-We assume the approach of using NSA/Performer/Kerformer will yield meaningful improvements based on literature review. However, without actual measurements of memory usage or computation time, we can't verify if this implementation achieves the stated goal of reducing the $O(n^2)$ bottleneck.
+We assume the approach of using Attention Mask Combination/NSA/Performer will yield meaningful improvements based on literature review. However, without actual measurements of memory usage or computation time, we can't verify if this implementation achieves the stated goal of reducing the $O(n^2)$ bottleneck.
 
 ## **DECIDE**
 
@@ -29,7 +28,7 @@ We assume the approach of using NSA/Performer/Kerformer will yield meaningful im
 
 - Implement and execute memory/computation benchmarks comparing baseline and custom attention (using torch.cuda.max_memory_allocated())
 - Create visualization comparing attention patterns between baseline and custom models to demonstrate what the model is actually learning
-- Fix context length issues in NSA implementation, and finish Kerformer implementation
+- Fix context length issues in NSA implementation
 - Empirically compare all the created models
 
 ## **ACT**
