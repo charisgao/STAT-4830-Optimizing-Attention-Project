@@ -125,7 +125,7 @@ As you can see, this appears to be linear, which is what we expect with this lin
 
 ### Native Sparse Attention
 
-In our implementation of Native Sparse Attention, we initially tried manually created a hierarchical attention layer that incorporates compressed tokens, selective attention, and a sliding window mechanism using PyTorch. This approach aimed to optimize the attention computation by reducing the number of tokens processed while maintaining the model's performance. We trained the model for 10 epochs using 50% of the WikiText-2 dataset as our training data. However, the initial results were disappointing, as the generated outputs consisted of random symbols rather than coherent text.
+In our implementation of Native Sparse Attention, we initially tried manually created a hierarchical attention layer that incorporates compressed tokens, selective attention, and a sliding window mechanism using PyTorch. This approach aimed to optimize the attention computation by reducing the number of tokens processed while maintaining the model's performance. We initially trained the model for 10 epochs using 50% of the WikiText-2 dataset as our training data. However, the initial results were disappointing, as the generated outputs consisted of random symbols rather than coherent text.
 
 To address these issues, we adjusted the implementation by increasing the context size and modifying the parameters for both the selective attention and sliding window mechanisms. Despite these changes, the new results still yielded outputs that entirely comprised exclamation points, indicating that the model was not effectively learning meaningful patterns in the data.
 
@@ -133,7 +133,7 @@ We could not find an official implementation of NSA by DeepSeek researchers. In 
 
 We fixed our previous errors in tensor misalignment and generating output next. We ran our optimization algorithm for 5 epochs, given our current compute restraint. Notably, the KL divergence loss has been decreasing with each epoch, suggesting some level of learning is occurring. Initially, the loss was 331.665, but decreased to 175.68 after 8 epochs.
 
-After getting a working implementation, we tested out different choices for hyperparameters such as the learning rate, temperature, epochs, and choice for optimizer. Initially, we ran only 5 epochs using the AdamW optimizer with initial learning rate of `5e-5` and temperature of 1. This did not yield ideal results, so we decided to run more epochs and change the hyperparameters. We changed the initial learning rate to be `1e-3` and a temperature of 0.7. With 10 epochs, the initial training loss decreased from 715.39 to 147.95. Even though this training loss is still relatively high, the output of the generated text is somewhat coherent. We changed up the calculation for the KL divergence from using a 'mean' reduction to 'sum' reduction when calculating the KL divergence across all the training samples in the batch. Below are sample output texts with the NSA implementation.
+After getting a working implementation, we tested out different choices for hyperparameters such as the learning rate, temperature, epochs, and choice for optimizer. Initially, we ran only 5 epochs using the AdamW optimizer with initial learning rate of `5e-5` and temperature of 1. This did not yield ideal results, so we decided to run more epochs and change the hyperparameters. We changed the initial learning rate to be `1e-3` and a temperature of 0.7. With 20 epochs, the initial training loss decreased from 715.39 to 88.045. Even though this training loss is still relatively high, the output of the generated text is somewhat coherent. We changed up the calculation for the KL divergence from using a 'mean' reduction to 'sum' reduction when calculating the KL divergence across all the training samples in the batch. Below are sample output texts with the NSA implementation.
 
 We have also started to track the time for training with the NSA implementation and CPU/GPU usage.
 
@@ -168,17 +168,16 @@ For Performer they still produce recognizable English words. This shows the mode
 
 **Prompt**: Artificial intelligence
 
-**After 6 epochs:**
-- **Reference**: [Artificial intelligence], known as AI, is a fascinating subject that has become more controversial. The idea of artificial intelligence is so well known to many that it has also been suggested that scientists are looking into the possibility of AI. The issue is more complicated than that.
-- **Custom**: [Artificial intelligence], which is in the midstententency- the debate is an "fridiazza in the Land of Light Justice (VNG ) ] ] ] ] ] ] ] ] ] shall be a "matter " ( [C ), )
-
-**After 8 epochs:**
-- **Reference**: [Artificial intelligence] is a major new field in tech, but the technology is not yet ready for commercial use. The company behind the project, DeepMind, says it has developed a prototype for "an intelligent machine that can solve real-world problems in a [...]
-- **Custom**: [Artificial intelligence] was a "wah-style " to describe a man of great authority to ' to the right-ing and the need for good . . I've Gog , his nephew, the "master , a good guy play-ing him into the
-
 **After 10 epochs:**
 - **Reference**: [Artificial intelligence] has a history of being used to achieve very particular goals, and we see it often in the search for a solution to a problem. The main problem is not the technology itself - it is the amount of data that can be processed and stored [...]
 - **Custom**: [Artificial intelligence] and the other major factors that do not apply the fundamental conclusions, it may be a useful consequence or might be justified to to understand and enforce the needs to to to to be filled with to one another one or a second one-vigial
+
+**After 20 epochs:**
+- **Reference**: [Artificial intelligence] is already one of the top 10 technologies in the business, but the number is growing every year.
+
+The company has now confirmed that it is the first company to offer the full range of artificial intelligence and artificial intelligence tools.
+
+- **Custom**: [Artificial intelligence] agents have long been able-tearicke , and may exist. it'seticizedization , where there is a substantial number of diseases, and may be a very limited number of waysisedisedised (especially , pumptusob
 
 #### Performer
 
@@ -200,7 +199,7 @@ For Performer they still produce recognizable English words. This shows the mode
 ### Current Limitations
 
 - **Minimal Dataset**: Synthetic or small text corpora, offering limited insight into real-world performance (we only use 1000 training samples).
-- **Limited Training**: Currently our NSA implementation only train for 10 epochs and the Performer implementations trains for 50 epochs.
+- **Limited Training**: Currently our NSA implementation only train for 20 epochs and the Performer implementations trains for 50 epochs.
 - **No Large Model**: GPT-2 was used purely for demonstration; we have not tested on bigger or more modern architectures.
 
 ### Resource Usage Measurements
