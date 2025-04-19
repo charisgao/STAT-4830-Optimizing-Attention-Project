@@ -65,7 +65,7 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 ![Native Sparse Attention Diagram](./figures/NSA_structure.png)
 
-- **Performers and Kerformers**: These use kernel-based approximations to replace softmax attention, reducing complexity to linear time. Performers rely on random feature maps, while Kerformers improve this with structured, data-aware projections that are learned—making both efficient for long-sequence modeling without major accuracy loss.
+- **Performers**: This uses a kernel-based approximations relying on random feature maps to replace softmax attention, reducing complexity to linear time.
 
 ### PyTorch Implementation Strategy
 
@@ -129,7 +129,7 @@ In our implementation of Native Sparse Attention, we initially tried manually cr
 
 To address these issues, we adjusted the implementation by increasing the context size and modifying the parameters for both the selective attention and sliding window mechanisms. Despite these changes, the new results still yielded outputs that entirely comprised exclamation points, indicating that the model was not effectively learning meaningful patterns in the data.
 
-We could not find an official implementation of NSA by DeepSeek researchers. In our search for improvement, we found a library implementation of Native Sparse Attention by Philip Wang et al. at Observe.AI and attempted to integrate it into our pipeline. He developed the [native-sparse-attention-pytorch](https://github.com/lucidrains/native-sparse-attention-pytorch) open-sourced library of sparse attention pattern. They implemented CUDA kernel hacking, single transformer-based compression network, and included compression block hyperparameters. 
+We could not find an official implementation of NSA by DeepSeek researchers. In our search for improvement, we found a library implementation of Native Sparse Attention by Philip Wang et al. at Observe.AI and attempted to integrate it into our pipeline. He developed the [native-sparse-attention-pytorch](https://github.com/lucidrains/native-sparse-attention-pytorch) open-sourced library of sparse attention pattern. They implemented CUDA kernel hacking, single transformer-based compression network, and included compression block hyperparameters.
 
 We fixed our previous errors in tensor misalignment and generating output next. We ran our optimization algorithm for 5 epochs, given our current compute restraint. Notably, the KL divergence loss has been decreasing with each epoch, suggesting some level of learning is occurring. Initially, the loss was 331.665, but decreased to 175.68 after 8 epochs.
 
@@ -139,9 +139,7 @@ We have also started to track the time for training with the NSA implementation 
 
 ### Performer
 
-In the Performer implementation, we replace the original attention layer in GPT2 with a Performer attention that uses FAVOR+ to map Q and K to a different space using random projections. We faced issues with NaN and infinity values previously, possibly because of overflow/underflow, as well as with division by 0. We were able to resolve many of these by normalizing the data `x_norm = x / math.sqrt(self.head_dim)` or the query/key projections. With these changes, we saw the KL divergence steadily decrease from 3.1287 to 2.2994 over 50 epochs. However, the new results still yielded outputs that were not very coherent, though the performance was significantly improved over past results.
-
-In the future, we intend to extend both these approaches to **measure the computational and memory usage** of our custom attention implementation, as well as experiment with regularization, penalty, and/or constraints (eg. low rank using SVD) to reduce complexity. We also want to test with both more advanced models beyond GPT-2, and additionally smaller models than can be run locally.
+In the Performer implementation, we replace the original attention layer in GPT2 with a Performer attention that uses FAVOR+ to map Q and K to a different space using random projections. We faced issues with NaN and infinity values previously, possibly because of overflow/underflow, as well as with division by 0. We were able to resolve many of these by normalizing the data `x_norm = x / math.sqrt(self.head_dim)` or the query/key projections. With these changes, we saw the KL divergence decrease from 2.3446 to 2.3255 over 5 epochs. However, the new results still yielded outputs that were not very coherent, though the performance was significantly improved over past results.
 
 **Key Observations**
 
@@ -157,10 +155,12 @@ For Performer they still produce recognizable English words. This shows the mode
 #### Linear Combination of Attention Masks
 
 **Prompt**: Hello, my name is
+
 - **Reference**: Hello, my name is Michael. I am an avid and highly informed computer science student who has been teaching at the University of Maryland for over 20 years." The letter said that students should be able to "discuss any topic or situation related by their professor about which they have no knowledge" if it's not presented in a timely fashion on campus during school hours (see above). Students are expected only one day before commencement: from 9 p!m., unless explicitly instructed otherwise through instructor feedback form once all questions were received — see section 7-6 below.) The report continues with this line of inquiry as written; however Drs.
 - **Custom**: Hello, my name is P.Nashin," she's a young woman with an infectious disease called Myalgic Fever. In March 2011 , the World Health Organization released statistics on 7th and 8 October of 2012 from 1 January 2013 to 15 April 2017 ( ). " The second part was already completed in December 2014". This had been decided by their manager 's decision : In his absence he made two signings as well at Swansea City for £1 million during that term - albeit without scoring twice since 2009-13
 
 **Prompt**: The meaning of life is
+
 - **Reference**: The meaning of life is not a function that we have to live in. Life requires us to be aware of what it means, how our bodies are shaped and changed by the world around us; living this way will lead to much greater success for ourselves as well as those who care about you." In other words: You're going to need people like me – or at least someone willing to give your body weight every day if so inclined - on an ongoing basis . I know all too intimately which types of women do best together (or don't) with whom but my advice would go out there…there's no one-size fits
 - **Custom**: The meaning of life is that it has no intrinsic worth. The Lord knows his God and will give him power to do great things for others . " This would be the last year or we should have a few days like this, but I am still not sure how much money you'll pay in terms [for] some time]."
 
@@ -169,10 +169,12 @@ For Performer they still produce recognizable English words. This shows the mode
 **Prompt**: Artificial intelligence
 
 **After 10 epochs:**
+
 - **Reference**: [Artificial intelligence] has a history of being used to achieve very particular goals, and we see it often in the search for a solution to a problem. The main problem is not the technology itself - it is the amount of data that can be processed and stored [...]
 - **Custom**: [Artificial intelligence] and the other major factors that do not apply the fundamental conclusions, it may be a useful consequence or might be justified to to understand and enforce the needs to to to to be filled with to one another one or a second one-vigial
 
 **After 20 epochs:**
+
 - **Reference**: [Artificial intelligence] is already one of the top 10 technologies in the business, but the number is growing every year.
 
 The company has now confirmed that it is the first company to offer the full range of artificial intelligence and artificial intelligence tools.
@@ -218,7 +220,7 @@ The company has now confirmed that it is the first company to offer the full ran
 
 - **Extend Training Data:** Use the full WikiText-2 dataset (rather than just 1000 samples) to get more realistic coverage and reduce overfitting.
 - **Fine-Tune Hyperparameters:** Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
-- **Attention Restructuring for NSA**: fix incoherent context later in the sentence generation
+- **Attention Restructuring**: Fix incoherent context later in the sentence generation
 
 ### What You've Learned So Far
 

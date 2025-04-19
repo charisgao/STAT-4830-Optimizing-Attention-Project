@@ -10,25 +10,25 @@ Reading through the report, we notice it has a strong theoretical foundation and
 
 - Clear problem statement with well-defined goals for optimizing attention in transformer models
 - Strong technical approach section with detailed mathematical formulation and validation methods
+- Started to record memory usage and computation time
 
 ### Areas for Improvement
 
 - Output text is less coherent than GPT-2 output text
 - Limited context window for GPT-2
-- Relatively high KL-divergence for NSA in particular, also high for Performer (loss not decreasing enough)
+- Relatively high KL-divergence for NSA and Performer implementation
 - More detailed comparison between output text between different implementations
 
 ### Critical Risks/Assumptions
 
-We assume the approach of using Attention Mask Combination/NSA/Performer will yield meaningful improvements based on literature review. However, without actual measurements of memory usage or computation time, we can't verify if this implementation achieves the stated goal of reducing the $O(n^2)$ bottleneck.
+We assume the approach of using Attention Mask Combination/NSA/Performer will yield meaningful improvements based on literature review. However, since we have a limited context window and max token size, we can't verify if this implementation achieves the stated goal of reducing the $O(n^2)$ bottleneck at scale.
 
 ## **DECIDE**
 
 ### Concrete Next Actions
 
-- Implement and execute memory/computation benchmarks comparing baseline and custom attention (using torch.cuda.max_memory_allocated())
 - Create visualization comparing attention patterns between baseline and custom models to demonstrate what the model is actually learning
-- Fix context length issues in NSA implementation
+- Fix context length issues
 - Empirically compare all the created models
 
 ## **ACT**
