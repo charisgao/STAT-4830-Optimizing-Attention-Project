@@ -69,8 +69,8 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 ### PyTorch Implementation Strategy
 
-1. **Baseline Model**: A larger, established Transformer architecture loaded from a standard library (e.g., Hugging Face).
-2. **Custom Attention Module**: Replace the default attention with a mechanism that only processes a subset of tokens, with learnable parameters dictating which tokens matter most. We also experiment using techniques from NSA or the Performer in the custom attention module.
+1. **Baseline Model**: A larger, established Transformer architecture loaded from a standard library (e.g., Hugging Face) (GPT2).
+2. **Custom Attention Module**: Replace the default attention with a mechanism that uses a weighted combination of attention masks and learnable parameters dictating which tokens matter most. We also experiment using techniques from NSA or the Performer in the custom attention module.
 
 - Native Sparse Attention: implement hierarchical attention with compressed tokens, selective attention, and sliding window with a GPT2 model
 - Performer: implement a Performer using the base GPT2 model, replacing the attention layer with a kernel-based linear attention module (e.g., FAVOR+, and potentially later causal FAVOR+).
@@ -103,6 +103,26 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 ## Results
 
+### Linear Combination of Attention Masks
+
+In this implementation, we used 5 different attention masks, each attending to just the last i'th token (i.e. one for the last token, one for the second to last token, and so on). We did see the loss decrease over time for both the training and validation datasets. It went from 1.4750 to 0.5875 over 10 epochs:
+
+![Training Loss](./figures/week13_report_training_loss.png)
+![Training Loss](./figures/week13_report_validation_loss.png)
+
+Below are graphs of the values of the coefficients of the attention masks for the linear combination of the masks:
+
+![Attention Block 0](./figures/week13_report_attention_block0.png)
+![Attention Block 4](./figures/week13_report_attention_block4.png)
+![Attention Block 8](./figures/week13_report_attention_block8.png)
+![Attention Block 11](./figures/week13_report_attention_block11.png)
+
+We also tracked the training and inference wall clock times, CPU clock times, CPU memory, and GPU memory usage. You can find more images of these in the [`/figures`](./figures) folder, but here is the CPU time for inference. It plots the output token length versus the time it took to run:
+
+![Attention Block 8](./figures/week13_report_custom_inference_cpu_time.png)
+
+As you can see, this appears to be linear, which is what we expect with this linear combination of attention masks approach (since the masks together only attend 5 tokens).
+
 ### Native Sparse Attention
 
 In our implementation of Native Sparse Attention, we initially tried manually created a hierarchical attention layer that incorporates compressed tokens, selective attention, and a sliding window mechanism using PyTorch. This approach aimed to optimize the attention computation by reducing the number of tokens processed while maintaining the model's performance. We trained the model for 10 epochs using 50% of the WikiText-2 dataset as our training data. However, the initial results were disappointing, as the generated outputs consisted of random symbols rather than coherent text.
@@ -113,7 +133,7 @@ We could not find an official implementation of NSA by DeepSeek researchers. In 
 
 We fixed our previous errors in tensor misalignment and generating output next. We ran our optimization algorithm for 5 epochs, given our current compute restraint. Notably, the KL divergence loss has been decreasing with each epoch, suggesting some level of learning is occurring. Initially, the loss was 331.665, but decreased to 175.68 after 8 epochs.
 
-After getting a working implementation, we tested out different choices for hyperparamenters such as the learning rate, temperature, epochs, and choice for optimizer. Initially, we ran only 5 epochs using the AdamW optimizer with initial learning rate of `5e-5` and temperature of 1. This did not yield ideal results, so we decided to run more epochs and change the hyperparamaters. We changed the initial learning rate to be `1e-3` and a temperature of 0.7. With 10 epochs, the initial training loss decreased from 715.39 to 147.95. Even though this training loss is still relatively high, the output of the generated text is somewhat coherent. We changed up the calculation for the KL divergence from using a 'mean' reduction to 'sum' reduction when calculating the KL divergence across all the training samples in the batch. Below are sample output texts with the NSA implementation.
+After getting a working implementation, we tested out different choices for hyperparameters such as the learning rate, temperature, epochs, and choice for optimizer. Initially, we ran only 5 epochs using the AdamW optimizer with initial learning rate of `5e-5` and temperature of 1. This did not yield ideal results, so we decided to run more epochs and change the hyperparameters. We changed the initial learning rate to be `1e-3` and a temperature of 0.7. With 10 epochs, the initial training loss decreased from 715.39 to 147.95. Even though this training loss is still relatively high, the output of the generated text is somewhat coherent. We changed up the calculation for the KL divergence from using a 'mean' reduction to 'sum' reduction when calculating the KL divergence across all the training samples in the batch. Below are sample output texts with the NSA implementation.
 
 We have also started to track the time for training with the NSA implementation and CPU/GPU usage.
 
@@ -133,6 +153,16 @@ In the future, we intend to extend both these approaches to **measure the comput
 Below are selected generation samples using the same prompts for both the reference and custom models. With more epochs, we see that the custom model's outputs become more coherent, but they eventually divulge into gibberish. This is most likely due to limited context length and a small initial training loop of 5 epochs.
 
 For Performer they still produce recognizable English words. This shows the model is capturing some of GPT-2's distribution, though lots of improvements can still be made.
+
+#### Linear Combination of Attention Masks
+
+**Prompt**: Hello, my name is
+- **Reference**: Hello, my name is Michael. I am an avid and highly informed computer science student who has been teaching at the University of Maryland for over 20 years." The letter said that students should be able to "discuss any topic or situation related by their professor about which they have no knowledge" if it's not presented in a timely fashion on campus during school hours (see above). Students are expected only one day before commencement: from 9 p!m., unless explicitly instructed otherwise through instructor feedback form once all questions were received — see section 7-6 below.) The report continues with this line of inquiry as written; however Drs.
+- **Custom**: Hello, my name is P.Nashin," she's a young woman with an infectious disease called Myalgic Fever. In March 2011 , the World Health Organization released statistics on 7th and 8 October of 2012 from 1 January 2013 to 15 April 2017 ( ). " The second part was already completed in December 2014". This had been decided by their manager 's decision : In his absence he made two signings as well at Swansea City for £1 million during that term - albeit without scoring twice since 2009-13
+
+**Prompt**: The meaning of life is
+- **Reference**: The meaning of life is not a function that we have to live in. Life requires us to be aware of what it means, how our bodies are shaped and changed by the world around us; living this way will lead to much greater success for ourselves as well as those who care about you." In other words: You're going to need people like me – or at least someone willing to give your body weight every day if so inclined - on an ongoing basis . I know all too intimately which types of women do best together (or don't) with whom but my advice would go out there…there's no one-size fits
+- **Custom**: The meaning of life is that it has no intrinsic worth. The Lord knows his God and will give him power to do great things for others . " This would be the last year or we should have a few days like this, but I am still not sure how much money you'll pay in terms [for] some time]."
 
 #### Native Sparse Attention
 
@@ -189,10 +219,7 @@ For Performer they still produce recognizable English words. This shows the mode
 
 - **Extend Training Data:** Use the full WikiText-2 dataset (rather than just 1000 samples) to get more realistic coverage and reduce overfitting.
 - **Fine-Tune Hyperparameters:** Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
-
 - **Attention Restructuring for NSA**: fix incoherent context later in the sentence generation
-- **Fix Performer Implementation**: fully flush out Performer implementation
-- **Add Kerformer Implementation**: add Kerformer implementation and compare with previous methods
 
 ### What You've Learned So Far
 
