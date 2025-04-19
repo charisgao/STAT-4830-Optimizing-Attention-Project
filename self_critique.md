@@ -14,11 +14,10 @@ Reading through the report, we notice it has a strong theoretical foundation and
 ### Areas for Improvement
 
 - Output text is less coherent than GPT-2 output text
-- No actual memory or computational efficiency measurements
-- Lack of comparison between baseline and custom model
 - Limited context window for GPT-2
 - Relatively high KL-divergence for NSA in particular, also high for Performer (loss not decreasing enough)
 - No functional Kerformer implementation
+- More detailed comparison between output text between different implementations
 
 ### Critical Risks/Assumptions
 
