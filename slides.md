@@ -186,13 +186,44 @@ two-tetetetetetetetetetetetetetetetetetetetetetetetetetetete  ...
 - train NSA on larger dataset for more epochs and experiment with context length so that coherent English words are produced --> currently accuracy concerns / limited coherence as well as high loss
 
 ---
+<style scoped>
+section {
+  font-size: 2.3em;
+}
+</style>
 
-## Further Steps
+## Individual Contribution - Chandler
 
-- Measure memory usage
-- Optimize hyperparameters
-- Experiment with regularization, penalty, and/or constraints
-- Test with different training datasets
+- Most surprising result
+  - Decreasing KL divergence loss not always more coherent output text 
+- Useful course concept
+  - Adaptive optimization methods and hyperparameter settings
+- Perspective on optimization
+  - Lots of trial and error with many decisions that work in practice but aren't always easily explainable
+- Next steps given 2 more weeks
+  - Test other loss functions, train longer, evaluate other baseline models
+- Biggest change if restarting project
+  - explore other sparse attention patterns and implement own NSA
+
+---
+
+## Individual Contribution - Charis
+
+- Most surprising result
+- Useful course concept
+- Perspective on optimization
+- Next steps given 2 more weeks
+- Biggest change if restarting project
+
+---
+
+## Individual Contribution - Jordan
+
+- Most surprising result
+- Useful course concept
+- Perspective on optimization
+- Next steps given 2 more weeks
+- Biggest change if restarting project
 
 ---
 
