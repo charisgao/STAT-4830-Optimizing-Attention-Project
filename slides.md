@@ -9,7 +9,7 @@ style: |
 
 # Optimizing Attention Mechanisms in Transformers
 
-#### Week 12: Project Overview and Results
+#### Final Presentation
 
 Chandler Cheung, Charis Gao, Jordan Hochman
 
@@ -17,11 +17,10 @@ Chandler Cheung, Charis Gao, Jordan Hochman
 
 ## Background
 
-- Transformer models have become central to NLP tasks
+- Transformer models are central to NLP tasks
 - In recent years, size of models has grown exponentially
 - Key challenge: $O(n^2)$ complexity in attention mechanism
-- Growing model sizes create memory constraints
-- Need more efficient attention mechanism without degrading performance
+- Growing model sizes create memory constraints --> need more efficient attention mechanism without degrading performance
 
 ---
 
@@ -31,6 +30,8 @@ Chandler Cheung, Charis Gao, Jordan Hochman
 - Train model with optimized attention mask to produce outputs similar to a baseline, unmodified transformer
 - Preserve model quality while reducing computational cost
 
+- TODO: why is this probelm particularly interesting
+
 ---
 
 ## Mathematical Formulation
@@ -38,11 +39,21 @@ Chandler Cheung, Charis Gao, Jordan Hochman
 Core objective: minimize KL-divergence between baseline and custom model over all training examples $X$
 $$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} \,\|\, P_{\text{custom}}\bigr)$$
 
-#### Metrics
+TODO: Justify your modeling choices.
+
+---
+
+## Metrics
 
 - Accuracy retention: comparable performance
 - Computational improvement (sub-quadratic): reduced memory and/or speed gains
 - Distribution alignment: low KL-divergence
+
+---
+
+## TODO: Literature Review
+
+What have others done? What are the key baseline methods?
 
 ---
 
@@ -86,11 +97,11 @@ def kl_divergence_loss(logits_custom, logits_ref, mask):
 
 ---
 
-## Naive Linear Combination of Candidate Masks
+## Linear Combination of Candidate Masks
 
 - Simple weighted linear combinations of 3-5 fixed candidate masks (eg. past 5 tokens, past 10 tokens, one-hot encoding of tokens, etc.)
 - Coefficients are tunable parameters
-- L1 penalty so coefficients are not extremely large and so that we can interpret which attention masks are significant
+- L1 penalty so coefficients are not extremely large and allows us to interpret which attention masks are significant
 
 ---
 
@@ -117,7 +128,21 @@ def kl_divergence_loss(logits_custom, logits_ref, mask):
 
 ---
 
-## Current Results - Naive Linear Combination
+<!-- TODO: Optimization:
+
+Detail the specific formulation (objective function, constraints).
+
+Which algorithm(s) did you choose and why? Connect to course concepts.
+
+Describe your tuning procedure. What hyperparameters were critical? How did you explore the hyperparameter space?
+
+Implementation: Briefly discuss key implementation choices (e.g., libraries used, specific PyTorch features leveraged).
+
+Limits Encountered: Where did you hit limits (e.g., computational resources, data availability, scalability, iteration speed, tuning difficulties)? How did you adapt? -->
+
+---
+
+## Results - Linear Combination
 
 - Over 100 epochs, loss decreased from 2.1470 to 0.3881
   - Custom attention can mimic the reference model's distributions
@@ -135,7 +160,7 @@ Custom: not a question, however many people are involved in this matter ...
 
 ---
 
-## Current Results - Naive Linear Combination Attention Masks Coefficients Convergence
+## Results - Linear Combination Attention Masks Coefficients Convergence
 
 ![width:330px height:231px](./figures/week7_report_attention_block0.png) ![width:330px height:231px](./figures/week7_report_attention_block4.png) ![width:330px height:231px](./figures/week7_report_attention_block11.png)
 
@@ -143,7 +168,7 @@ Graphs of evolution of attention mask coefficients during training. Each line re
 
 ---
 
-## Current Results - Performer
+## Results - Performer
 
 - Work in progress - generates coherent English text
 - Trained for 50 epochs, loss decreased from 3.1287 to 2.2994
@@ -163,7 +188,7 @@ Custom: around a temple. The second floor which is still standing right and that
 
 ---
 
-## Current Results - NSA
+## Results - NSA
 
 - Work in progress
 - Trained for 5 epochs, loss decreased from 331.665 to 175.68
@@ -179,6 +204,16 @@ two-tetetetetetetetetetetetetetetetetetetetetetetetetetetete  ...
 
 ---
 
+<!-- TODO: Present your key quantitative results clearly (e.g., graphs, tables).
+
+How do your results compare to baseline methods or the literature?
+
+Provide an interpretation of your results. What do they mean in the context of the problem?
+
+Showcase a demo or compelling visualization if applicable.
+
+Compare expected progress with actual progress. Explain discrepancies.-->
+
 ## Current Limitations and Direct Next Steps
 
 - Standardize all implementations to use same loss function, optimizer, step size, scheduler, etc.
@@ -186,6 +221,19 @@ two-tetetetetetetetetetetetetetetetetetetetetetetetetetetete  ...
 - train NSA on larger dataset for more epochs and experiment with context length so that coherent English words are produced --> currently accuracy concerns / limited coherence as well as high loss
 
 ---
+
+## Project Reflection:
+
+What was the number one technical or conceptual difficulty?
+
+What part of the project workflow was easier than expected? Harder?
+
+How did your project goals or approach evolve based on self-critiques or intermediate results?
+
+How did AI tools assist your project (e.g., coding, debugging, writing, brainstorming)? Give specific examples.
+
+---
+
 <style scoped>
 section {
   font-size: 2.3em;
@@ -195,7 +243,7 @@ section {
 ## Individual Contribution - Chandler
 
 - Most surprising result
-  - Decreasing KL divergence loss not always more coherent output text 
+  - Decreasing KL divergence loss not always more coherent output text
 - Useful course concept
   - Adaptive optimization methods and hyperparameter settings
 - Perspective on optimization
@@ -203,7 +251,7 @@ section {
 - Next steps given 2 more weeks
   - Test other loss functions, train longer, evaluate other baseline models
 - Biggest change if restarting project
-  - explore other sparse attention patterns and implement own NSA
+  - Explore other sparse attention patterns and implement own NSA
 
 ---
 
