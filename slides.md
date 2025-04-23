@@ -43,6 +43,26 @@ TODO: Justify your modeling choices.
 
 ---
 
+## Loss Computation
+
+- Compute logits from both models on the same input batch
+- Calculate KL-divergence and minimize
+
+```python
+def kl_divergence_loss(logits_custom, logits_ref, mask):
+    log_probs_custom = F.log_softmax(logits_custom, dim=-1)
+    probs_ref = F.softmax(logits_ref.detach(), dim=-1)  # Detach reference model
+
+    # Calculate per-token KL
+    kl = (probs_ref * (probs_ref.log() - log_probs_custom)).sum(-1)
+
+    # Apply padding mask and average
+    active_tokens = mask.sum()
+    return (kl * mask).sum() / active_tokens
+```
+
+---
+
 ## Metrics
 
 - Accuracy retention: comparable performance
@@ -74,26 +94,6 @@ What have others done? What are the key baseline methods?
 
 - Transformer-based language model built using stacked decoder blocks focused on self-attention
 - Causal masking – each word in a sequence attends to all previous words using scaled dot-product attention
-
----
-
-## Loss Computation
-
-- Compute logits from both models on the same input batch
-- Calculate KL-divergence and minimize
-
-```python
-def kl_divergence_loss(logits_custom, logits_ref, mask):
-    log_probs_custom = F.log_softmax(logits_custom, dim=-1)
-    probs_ref = F.softmax(logits_ref.detach(), dim=-1)  # Detach reference model
-
-    # Calculate per-token KL
-    kl = (probs_ref * (probs_ref.log() - log_probs_custom)).sum(-1)
-
-    # Apply padding mask and average
-    active_tokens = mask.sum()
-    return (kl * mask).sum() / active_tokens
-```
 
 ---
 
@@ -243,7 +243,7 @@ section {
 ## Individual Contribution - Chandler
 
 - Most surprising result
-  - Decreasing KL divergence loss not always more coherent output text
+  - Decreasing KL divergence loss does not always produce more coherent output text
 - Useful course concept
   - Adaptive optimization methods and hyperparameter settings
 - Perspective on optimization
@@ -254,6 +254,12 @@ section {
   - Explore other sparse attention patterns and implement own NSA
 
 ---
+
+<style scoped>
+section {
+  font-size: 2.3em;
+}
+</style>
 
 ## Individual Contribution - Charis
 
