@@ -34,6 +34,8 @@ We are currently focusing on **WikiText-2** as our primary dataset for language 
 ### What Data Do We Need?
 
 - **WikiText-2** for initial experimentation and evaluation.
+  - Built from Wikipedia articles and is common dataset among literature that is curated and easy to use. THere are abotu two million tokens in the training set, about 220,000 tokens in the validation set, and about 240,000 tokens in the test set.
+  - Despite GPT2 being trained on a different dataset, the original dataset is not publically available (OpenAI scrapped web data and excluded Wikipedia pages)
 - Potentially **WikiText-103** or other larger corpora as we scale up the approach and test longer context windows.
 - For thorough testing, we may also include smaller validation sets to measure perplexity and check overfitting.
 
@@ -45,22 +47,36 @@ We are currently focusing on **WikiText-2** as our primary dataset for language 
 
 ---
 
+## Literature Review
+
+- **Sparse Attention**: Each token attending to a subset of other tokens
+  - BASED ([Arora et al., 2024](https://arxiv.org/abs/2402.18668)): combines linear attention + sliding window attention
+  - Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention ([Yuan et al., 2025](https://arxiv.org/abs/2502.11089)): algorithmic innovation and hardware-aligned optimization for long-context optimization
+- **Low-Rank Approximations**: approximate attention matrix with low-rank matrices
+  - Linformer ([Wang et al., 2020](https://arxiv.org/abs/2006.04768)): projects $n \times d_m$ query/key matrices to smaller $k\times d_k$ where $k<<n$, which is a low-rank factorization of original attention
+- **Efﬁcient Routing/Dynamic Attention**: dynamically determine which tokens should attend to each other
+  - Routing Transformer ([Roy et al., 2021](https://arxiv.org/abs/2003.05997)): tokens mapped to routing space, uses online k-means clustering to assign tokens to clusters based on similarity in routing space, tokens attend only to tokens within same cluster
+- **Kernel-based Methods**: reformulate attention with kernel functions
+  - Kernel trick: performs this operation in the original space (implicitly compute dot products in some-dimensional feature space, without ever having to transform the vectors to that space)
+  - Performer ([Choromanski et al., 2021](https://arxiv.org/abs/2009.14794)) – replaces softmax attention, uses random feature mappings to approximate the exponential kernel
+
+---
+
 ## Technical Approach
 
 ### Mathematical Formulation
 
 We define two Transformer models: a **baseline** and a **custom**. If $P_{\text{base}}(\cdot\mid X)$ is the baseline output distribution and $P_{\text{custom}}(\cdot\mid X)$ is our custom model's distribution, we minimize:
 
-$$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{base}} \,\|\, P_{\text{custom}}\bigr)$$
+$$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{custom}} \,\|\, P_{\text{base}}\bigr)$$
 
-summed over all training examples $X$. This objective encourages the custom attention to preserve the baseline model's behavior.
+summed over all training examples $X$. This objective encourages the custom attention to preserve the baseline model's behavior by keeping the probability distribution for the next token similar.
 
 ### Algorithm/Approach Choice and Justification
 
 - **Adaptive Attention Mask**: Long-term, we want to learn a sparse mask or restricted set of tokens that provide sufficient context with fewer computations.
 - **KL-Divergence Alignment**: By aligning probabilities, we ensure that any modifications to attention remain faithful to the baseline's predictions.
 - **Sub-Quadratic Focus**: The ultimate aim is to reduce attention complexity from $O(n^2)$ to something more tractable for large $n$.
-
 - **Native Sparse Attention**: NSA is a hardware-optimized and end-to-end trainable sparse attention mechanism that reduces computational overhead through a hierarchical approach. It organizes tokens into compressed representations for global context, selectively retains the most relevant tokens for local precision, and employs a sliding window mechanism to maintain continuity in processing.
 
 ![Native Sparse Attention Diagram](./figures/NSA_structure.png)
@@ -101,6 +117,8 @@ summed over all training examples $X$. This objective encourages the custom atte
 
 - We plan to use a GPU for training and validation on WikiText-2. We will be utilizing Google Cloud for access to more powerful GPUs and TPUs, utilizing the provided credit.
 
+---
+
 ## Results
 
 ### Linear Combination of Attention Masks
@@ -133,9 +151,18 @@ We could not find an official implementation of NSA by DeepSeek researchers. In 
 
 We fixed our previous errors in tensor misalignment and generating output next. We ran our optimization algorithm for 5 epochs, given our current compute restraint. Notably, the KL divergence loss has been decreasing with each epoch, suggesting some level of learning is occurring. Initially, the loss was 331.665, but decreased to 175.68 after 8 epochs.
 
-After getting a working implementation, we tested out different choices for hyperparameters such as the learning rate, temperature, epochs, and choice for optimizer. Initially, we ran only 5 epochs using the AdamW optimizer with initial learning rate of `5e-5` and temperature of 1. This did not yield ideal results, so we decided to run more epochs and change the hyperparameters. We changed the initial learning rate to be `1e-3` and a temperature of 0.7. With 20 epochs, the initial training loss decreased from 715.39 to 88.045. Even though this training loss is still relatively high, the output of the generated text is somewhat coherent. We changed up the calculation for the KL divergence from using a 'mean' reduction to 'sum' reduction when calculating the KL divergence across all the training samples in the batch. Below are sample output texts with the NSA implementation.
+After getting a working implementation, we tested out different choices for hyperparameters such as the learning rate, temperature, epochs, and choice for optimizer. Initially, we ran only 5 epochs using the AdamW optimizer with initial learning rate of `5e-5` and temperature of 1. This did not yield ideal results, so we decided to run more epochs and change the hyperparameters. We changed the initial learning rate to be `1e-3` and a temperature of 0.7. With 0 epochs, the initial training loss decreased from 715.39 to 88.045. Even though this training loss is still relatively high, the output of the generated text is somewhat coherent. We changed up the calculation for the KL divergence from using a 'mean' reduction to 'sum' reduction when calculating the KL divergence across all the training samples in the batch. When running this optimization for 50 epochs, the training loss decreased from 713.74 to 33.46; the loss didn't change for the last few epochs, so we stopped the training loop.
 
-We have also started to track the time for training with the NSA implementation and CPU/GPU usage.
+Next, to isolate the contributing factor of whether the dataset was bad or the next token predicted was bad, we included an additional term in the loss function to measure the loss for the next predicted token. In this sense, if we still achieve a relatively low loss, then we know the main contributing factor for poor performance would be the dataset, since we used a dataset that's different than the original data that GPT2 was trained on. Running this attention optimization with the modified loss function, the loss decreased from 1181.643 to 83.756. From the graph below, we see that the loss seems to be bottoming out, so we didn't continue training more than 50 epochs.
+
+![NSA Average KL + Next Predicted Token Loss per Epoch](./figures/nsa_avg_kl_next_token_loss.png)
+
+We tracked the time for training with the NSA implementation and CPU/GPU usage. Below are the plots for the CPU/GPU and memory usage during training. These plots don't provide much insight into the time and space efficiency compared to normal, full attention.
+
+![NSA (Loss: KL + Next Predicted Token) Wall TIme](./figures/nsa_wall_time.png)
+![NSA (Loss: KL + Next Predicted Token) CPU Time](./figures/nsa_cpu_time.png)
+![NSA (Loss: KL + Next Predicted Token) CPU Memory Usage](./figures/nsa_cpu_mem.png)
+![NSA (Loss: KL + Next Predicted Token) GPU Memory Allocation](./figures/nsa_gpu_alloc.png)
 
 ### Performer
 
@@ -145,12 +172,16 @@ In the Performer implementation, we replace the original attention layer in GPT2
 
 - KL-divergence decreases steadily, confirming that the custom model is aligning its output distribution to GPT-2's.
 - However, many of the outputs for both Native Sparse Attention and the Performer are not coherent or clearly lacking compared to GPT2.
+- Achieved low KL-divergence between custom and baseline models
+  - Probability distributions should be mostly aligned, but this statistical similarity doesn’t translate to human-perceived quality
+  - KL-divergence alone might be an insufﬁcient metric for capturing language quality
+and coherence. There is a gap between statistical and semantic performance (aligning token distribution patterns is not enough)
 
-### Test case results
+### Test Case Results
 
-Below are selected generation samples using the same prompts for both the reference and custom models. With more epochs, we see that the custom model's outputs become more coherent, but they eventually divulge into gibberish. This is most likely due to limited context length and a small initial training loop of 5 epochs.
+Below are selected generation samples using the same prompts for both the reference and custom models. With more epochs, we see that the custom model's outputs become more coherent, but they eventually divulge into gibberish. This is most likely due to limited context length.
 
-For Performer they still produce recognizable English words. This shows the model is capturing some of GPT-2's distribution, though lots of improvements can still be made.
+The models still produce recognizable English words. This shows the model is capturing some of GPT-2's distribution, though lots of improvements can still be made.
 
 #### Linear Combination of Attention Masks
 
@@ -166,20 +197,23 @@ For Performer they still produce recognizable English words. This shows the mode
 
 #### Native Sparse Attention
 
-**Prompt**: Artificial intelligence
+**Prompt**: In a shocking turn of events,
 
-**After 10 epochs:**
+- **Reference**: In a shocking turn of events, the FBI is now investigating the attack. Federal agents say they have arrested a man wanted on terrorism charges for attempting to bomb a car in an Orlando nightclub, and the FBI has also seized two computers, laptops, and a phone, the Orlando [...]
+- **Custom**: In a shocking turn of events, or two--
+ points.
+,.m. . The New York Times reported that I am proud to discuss how that is true and very often." is not what is known as the "d " . . . . the problem is that [...]
 
-- **Reference**: [Artificial intelligence] has a history of being used to achieve very particular goals, and we see it often in the search for a solution to a problem. The main problem is not the technology itself - it is the amount of data that can be processed and stored [...]
-- **Custom**: [Artificial intelligence] and the other major factors that do not apply the fundamental conclusions, it may be a useful consequence or might be justified to to understand and enforce the needs to to to to be filled with to one another one or a second one-vigial
+**Prompt**: The future of artificial intelligence
 
-**After 20 epochs:**
+- **Reference**: The future of artificial intelligence is in the making. The US Department of Defense is developing a technology that could enable people to track and control the movement of robots, and can perform tasks such as alerting them to a threat. The Pentagon recently unveiled its " [...]
+- **Custom**: The future of artificial intelligence, and the use of organic matter under conditions,,,,, 2000 to the following information gathered by the invention of protein products as a tool in the environment , where they were tested in accordance ( ). ) , and human beings for human and the [...]
 
-- **Reference**: [Artificial intelligence] is already one of the top 10 technologies in the business, but the number is growing every year.
+**Prompt**: The meaning of life is
 
-The company has now confirmed that it is the first company to offer the full range of artificial intelligence and artificial intelligence tools.
-
-- **Custom**: [Artificial intelligence] agents have long been able-tearicke , and may exist. it'seticizedization , where there is a substantial number of diseases, and may be a very limited number of waysisedisedised (especially , pumptusob
+- **Reference**: The meaning of life is a whole and the body is a part of it. The human spirit is not a separate spirit from the human body. It must be regarded as a whole that is in the same. The human body is the whole of spirit and the human spirit is [...]
+- **Custom**: The meaning of life is the right- or the person,,,,....@ @@.%!
+, 9, @@.@.@ / .@/.@ .@ @@ ; - @@ =.@ @@ ;
 
 #### Performer
 
@@ -201,8 +235,11 @@ The company has now confirmed that it is the first company to offer the full ran
 ### Current Limitations
 
 - **Minimal Dataset**: Synthetic or small text corpora, offering limited insight into real-world performance (we only use 1000 training samples).
-- **Limited Training**: Currently our NSA implementation only train for 20 epochs and the Performer implementations trains for 50 epochs.
+- **Different Dataset**: trained attention optimization implementations on the WikiText2 dataset, which is different than the proprietary dataset that GPT2 was originally trainied on; could have contributed to weaker learning
+- **Limited Training**: Currently our NSA and Performer implementations only train for 50 epochs.
 - **No Large Model**: GPT-2 was used purely for demonstration; we have not tested on bigger or more modern architectures.
+- **Compute Constraints**: Google Colab Notebooks only allowed us to trian on GPUs for ~3-4 hours per day; had to save checkpoints of models very often.
+- **Limited Context Window**: compute and runtime constraints limited the size of the model and context window we could use
 
 ### Resource Usage Measurements
 
@@ -211,18 +248,22 @@ The company has now confirmed that it is the first company to offer the full ran
 ### Unexpected challenges
 
 - **Limited Coherence**: We will need more sophisticated masking to handle longer contexts properly.
-- **Overfitting**: Because our dataset was tiny, we saw the model quickly saturate or jump around in text quality, suggesting the need for better regularization.
-- **Accuracy Concerns**: Potential accuracy degradation from over-sparsification.
+- **Loss Function**: Hard to identify the correct loss function to get similar, coherent outputs as original GPT2 model. Initially, we thought that using KL divergence would be enough, but the results were still not coherent. Adding next predicted token loss did not really improve the coherence of output text.
+- **Compute constraints**: Google Colab has a bad user interface for coding and saving models and the runtime would often disconnect, leading us to having to rerun our notebooks multiple times.
 
-## Next Steps
+## Future Steps
 
-### Immediate improvements needed
-
-- **Extend Training Data:** Use the full WikiText-2 dataset (rather than just 1000 samples) to get more realistic coverage and reduce overfitting.
-- **Fine-Tune Hyperparameters:** Adjust learning rates, batch sizes, and sequence lengths to improve stability and convergence.
+- **Different Dataset**: Use the original GPT2 model to generate training data to use so that the training data is similar to the original dataset used to train the GPT2 model. This would address some of the concerns of using a different dataset to train our attention optimizations than the proprietary dataset used to train GPT2.
+- **Fine-Tune Hyperparameters:** Adjust learning rates and sequence lengths and tune hyperparameters more to improve stability and convergence.
+- **Baseline Models**: Evaluate other baseline models besides GPT2
+- **Loss Functions**: Try other loss functions besides KL divergence and other modifications to see if output text is more coherent.
+- **Larger Context Windows**: train with more compute and larger context windows
 - **Attention Restructuring**: Fix incoherent context later in the sentence generation
 
 ### What You've Learned So Far
 
-- **KL-Divergence Feasibility**: Minimizing KL directly is an effective way to align two models' distributions.
+- **Simple models work**: Out of our three implementations for attention optimizations, the simplest method of using linear combinations of attention masks had the best performance and was most similar to the original output. This is most likely due to the fact that the linear combination attention masks changed the GPT2 model the least so the model retained more information from it's original training.
+- **Adaptive optimization methods**: We learned more about how different adaptive optimization methods change the performance of the final model. We tried different optimizers when determing the optimal parameters in the attention layers to . We ended up utilizing the AdamW optimizer for our final implementation because it decouples the weight decay from the adaptive udpate mechanism.
+- **Learning rate schedulers**: We learned how learning rate schedulers can help training models when the parameters get stuck in a local minimum during training. When the training the Performer implementation, we initially hit a noise floor and the scheduler helped get past this. We settled on using the CosineAnnealing scheduler.
+- **Attention optimizations**: Experimenting with differnet attention optimizers gave us better insight into how transformers work and latest research into how people are optimizing attention layers to improve memory and time efficiency during training.
 - **Attention Substitution**: Swapping out the standard self-attention module is straightforward if we mirror the input-output shapes and track weights carefully.

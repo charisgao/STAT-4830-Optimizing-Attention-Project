@@ -1,3 +1,20 @@
+<!-- 
+Include:
+
+Project Title & Team Members.
+
+High-Level Summary: Final problem statement, approach, key findings/contributions.
+
+Repository Structure Overview: Explain the cleaned structure (src, notebooks, docs, report.md). Briefly mention the _development_history/ folder and its purpose.
+
+Setup Instructions: Detail exactly how to set up the environment for the final code (Python version, pip install -r requirements.txt, virtual env recommendation, other software/keys).
+
+Running the Code: Clear instructions/commands to run the final scripts, reproduce key results, or use the demo notebook. Document the sequence if multi-step.
+
+Executable Demo Link: Prominent link to your final runnable demo (Colab preferred).
+-->
+
+
 # STAT 4830 Project Repository
 
 Welcome to your project repository! This template helps you develop and implement an optimization project over the semester.
