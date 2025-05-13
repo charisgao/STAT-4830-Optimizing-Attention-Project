@@ -81,6 +81,14 @@ Overall, our approach to improve on this focuses on three experimental methods:
 
 1. **Linear Combination of Attention Masks**: We test linear combinations of simple candidate attention masks with learnable weight parameters (one-hot vectors of the last ith token for i up to 5). The attention coefficients are learnable parameters, while model weights are fixed. We also tested with and without a L1 penalty on the coefficients.
 
+Here is a visual representation of the linear combination of masks used in the results below:
+
+![Custom Attention Masks Graphic](./figures/custom_base_real.png)
+
+However, the model is generalizable to any set of attention masks, and could be used in a variety of examples such as in this image:
+
+![Custom Attention Masks Graphic Sample](./figures/custom_base.png)
+
 2. **Performers**: Performers use kernel-based approximations relying on random feature maps to replace softmax attention, reducing complexity to linear time. A kernel function approximates the inner product between vectors in some high-dimensional random feature space, specifically, the expected value of the inner product of the corresponding vectors after being mapped into a random feature space. In this case, the random feature map transforms the query and key vectors into another-dimensional space using random vectors drawn from a uniform or Gaussian distribution. Using these new vectors, we approximate the exponential kernel and the attention mechanism. A key insight is that all tokens are still attending to all other tokens in the Performer model, but the key difference is how this attention is computed. In our approach, we optimize the query, key, and value projection matrices and all standard Transformer parameters (eg. embeddings, LN, FFN weights, output projections, etc.). The random projection matrices/features themselves are fixed after initialization, and we are simply optimizing linear projections around these fixed random features. Thus, the model learns how to best use these random features and the distillation process helps ensure that this approximation is effective by guiding the model to produce outputs similar to the original attention mechanism.
 
 3. **Native Sparse Attention**: NSA is a hardware-optimized and end-to-end trainable sparse attention mechanism that reduces computational overhead through a hierarchical approach. It organizes tokens into compressed representations for global context, selectively retains the most relevant tokens for local precision, and employs a sliding window mechanism to maintain continuity in processing.
