@@ -14,11 +14,13 @@ This project focuses on optimizing attention mechanisms in Transformer models to
 2. Performer
 3. Native Sparse Attention (NSA)
 
-Our key findings show that the simplest approach (linear combination of attention masks) performed best in terms of output coherence and similarity to the baseline GPT-2 model. The loss function we chose to minimize is the KL divergence, which measures the difference between two probability distributions of the next token for prediction. While we achieved low KL-divergence between our custom models and the baseline, we discovered that statistical similarity doesn't necessarily translate to human-perceived quality in generated text. Most of the text from the Performer and NSA model were not coherent. We also added another term in the loss function for next token prediction, but found that it did not improve output coherence either.
+Our key findings show that the simplest approach (linear combination of attention masks) performed best in terms of output coherence and similarity to the baseline GPT-2 model. The loss function we chose to minimize is the KL divergence, which measures the difference between two probability distributions of the next token for prediction. While we achieved low KL-divergence between our custom models and the baseline, we discovered that statistical similarity doesn't necessarily translate to human-perceived quality in generated text. Most of the text from the Performer and NSA model were not coherent. We hypothesize that this is due to the mismatch in the datasets used. GPT-2 was trained on a dataset excluding Wikipedia, while our models were trained on only Wikipedia data. This mismatch between the training data might be the cause for poor model performance.
+
+We also tried calculating the loss based on the CrossEntropyLoss between the tested model and the actually correct output token. We added this loss term for next token prediction, but found that it did not improve output coherence either in any model.
 
 #### Key Limitations
 
-- Limited to WikiText-2 dataset– GPT2 was trained on Webtext (excludes Wikipedia) while we trained on Wikitext-2 (solely Wikipedia)
+- Limited to WikiText-2 dataset: GPT2 was trained on Webtext (excludes Wikipedia) while we trained on Wikitext-2 (solely Wikipedia)
 - Training constrained by compute resources of Google Colab
 - Context window size limitations to reduce training speed/time
 - Overall output coherence issues

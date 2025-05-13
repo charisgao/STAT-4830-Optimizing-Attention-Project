@@ -18,11 +18,12 @@ Transformer-based language models have become central to a wide variety of NLP t
 
 1. **Natural Language Flow**: Does the custom attention model perform comparably (in terms of coherence and fluency) to the baseline in generating text? This involves human evaluation on grammatical correctness, logical flow, and overall readability as well as evaluating the diversity of outputs (analyzing the variety in generated responses to the same prompts to ensure that the model does not produce repetitive or overly similar outputs, which can indicate a lack of creativity in language generation).
 2. **Distribution Alignment**: A lower KL-divergence between the custom model's outputs and the baseline model signals successful attention optimization.
-3. **Computational Improvement**: We will track how well the approach scales with sequence length, aiming for reduced memory usage or speed gains.
+3. **Next Token Predictability**: A low CrossEntropyLoss for computing the next token in the sequence implies the model is successfully predicting text.
+4. **Computational Improvement**: We will track how well the approach scales with sequence length, aiming for reduced memory usage or speed gains.
 
 ### What Are Our Constraints?
 
-Despite GPT2 being trained on a different dataset, the original dataset is not publically available (OpenAI scrapped web data and excluded Wikipedia pages). We currently use **WikiText-2** as our primary dataset for language modeling. It is freely available, moderate in size (roughly 2 million tokens), and standard for benchmarking. We want to be able to process sequences of up to 128 tokens (as a starting point) on a single GPU without out-of-memory errors, implement the code in standard PyTorch, avoiding highly specialized CUDA kernels, as well as have enough compute resources to train models until the loss levels off.
+Despite GPT2 being trained on a different dataset, the original dataset is not publicly available (OpenAI scrapped web data and excluded Wikipedia pages). We currently use **WikiText-2** as our primary dataset for language modeling. It is freely available, moderate in size (roughly 2 million tokens), and standard for benchmarking. We want to be able to process sequences of up to 128 tokens (as a starting point) on a single GPU without out-of-memory errors, implement the code in standard PyTorch, avoiding highly specialized CUDA kernels, as well as have enough compute resources to train models until the loss levels off.
 
 ### What Data Do We Need?
 
@@ -58,11 +59,15 @@ There are many existing approaches that aim to improve the attention mechanism i
 
 We define two Transformer models: a **baseline** and a **custom**. If $P_{\text{base}}(\cdot\mid X)$ is the baseline output distribution and $P_{\text{custom}}(\cdot\mid X)$ is our custom model's distribution, we minimize:
 
-$$\mathcal{L} = \mathrm{KL}\bigl(P_{\text{custom}} \,\|\, P_{\text{base}}\bigr)$$
-
-TODO with next token prediction
+$$\mathcal{L}_{KL} = \mathrm{KL}\bigl(P_{\text{custom}} \,\|\, P_{\text{base}}\bigr)$$
 
 summed over all training examples $X$. This objective encourages the custom attention to preserve the baseline model's behavior by keeping the probability distribution for the next token similar.
+
+We also tried a standard next‐token cross‐entropy loss objective instead to measure the next token prediction, without a baseline model. The loss formulation for this is, for each example sequence $X$ with ground-truth next token $y^*$:
+
+$$\mathcal{L}_{CE} = -\sum_{X\in\mathcal{D}}\log P_{\text{custom}}\bigl(y^*\mid X\bigr)$$
+
+We tried combining these two loss functions together by adding them to penalize the model whenever it assigns low probability to the true next token, but also not differentiate from the baseline distribution.
 
 ### Algorithm/Approach Choice and Justification
 
@@ -91,19 +96,17 @@ Overall, our approach to improve on this focuses on three experimental methods:
    - Performer: implement a Performer using the base GPT2 model, replacing the attention layer with a kernel-based linear attention module (based on FAVOR+)
    - Native Sparse Attention: implement hierarchical attention with compressed tokens, selective attention, and sliding window with a GPT2 model
 
-3. **Loss Computation**: Compute logits from both models on the same input batch, then apply a loss function. Our loss function combines KL-divergence between probability distribution of next token from baseline model and custom model with next token prediction.
+3. **Loss Computation**: Compute logits from both models on the same input batch, then apply a loss function. Our loss function combines KL-divergence between probability distribution of next token from baseline model and custom model with the cross-entropy of the next token prediction.
 4. **Parameter Updates**: Use AdamW optimizer and Cosine Annealing scheduler to train the new attention module while freezing or partially freezing other layers. We use an initial learning rate of $10^{-3}$.
 5. **Text Generation**: We generate sample text using temperature = 0.7, top k = 50 (restricts number of tokens from which to sample).
 
 ### Validation Methods
 
-- **Validation Loss**: Track loss (KL-divergence and next token prediction) on a held-out set to ensure the custom model matches the baseline distribution over time.
-
-TODO
+- **Validation Loss**: Track loss (KL-divergence and cross-entropy for next token prediction) on a held-out set to ensure the custom model matches the baseline distribution over time.
 
 - Load weights from baseline models (e.g., HuggingFace's `bert-base-uncased`), replace _only_ the attention module, and evaluate **without fine-tuning**.
 - Ensures optimization does not rely on retraining to "recover" lost accuracy.
-- L1 penalty for coefficients of attention masks
+- L1 penalty for coefficients of attention masks (no penalty used for the results given - details explained below)
 - **Perplexity/Accuracy**: Evaluate on standard tasks (e.g., language modeling or classification) to ensure minimal drop in performance.
 - **Edge cases**: Sequences with extreme sparsity (e.g., all padding tokens) or high similarity (e.g., repeated tokens).
 - **Scalability Tests**: Gradually increase input sequence lengths and measure memory usage, throughput, and any speed improvements.
@@ -118,27 +121,52 @@ We used a T4 GPU on Google Colab for training and validation on WikiText-2.
 
 ### Linear Combination of Attention Masks
 
-TODO
+In this implementation, we used 5 different attention masks, each attending to just the last i'th token (i.e. one for the last token, one for the second to last token, and so on).
 
-In this implementation, we used 5 different attention masks, each attending to just the last i'th token (i.e. one for the last token, one for the second to last token, and so on). We did see the loss decrease over time for both the training and validation datasets. It went from 1.4750 to 0.5875 over 10 epochs:
+We first trained it with only the KL-divergence loss, and we did see the loss decrease over time for both the training and validation datasets. The training loss went from 1.4750 to 0.5875 over 10 epochs (10 epochs due to resource limitation constraints of Google Colab):
 
-![Training Loss](./figures/week13_report_training_loss.png)
-![Training Loss](./figures/week13_report_validation_loss.png)
+![Custom model KL-divergence training loss](./figures/week13_report_training_loss.png)
+![Custom model KL-divergence validation loss](./figures/week13_report_validation_loss.png)
 
-Below are graphs of the values of the coefficients of the attention masks for the linear combination of the masks:
+Below are graphs of the values of the coefficients of the attention masks (the "alphas") for the linear combination of the masks. Note there are actually 12 blocks, and hence 12 graphs, but only 4 are provided here. These rest can be found in the [Week 13 Custom Masks Notebook](../_archive/notebooks/week13_implementation_custom_masks.ipynb).
 
 ![Attention Block 0](./figures/week13_report_attention_block0.png)
 ![Attention Block 4](./figures/week13_report_attention_block4.png)
 ![Attention Block 8](./figures/week13_report_attention_block8.png)
 ![Attention Block 11](./figures/week13_report_attention_block11.png)
 
-We also tracked the training and inference wall clock times, CPU clock times, CPU memory, and GPU memory usage. You can find more images of these in the [`/figures`](./figures) folder, but here is the CPU time for inference. It plots the output token length versus the time it took to run:
+Here is a visual representation heatmap of what the attention masks look like after training. Since there are 12 attention blocks, and 12 heads for each, there are actually 144 different masks (all 128x128 to attend to the entire sequence). We will only show a subset of 2 of them here (cut to 16x16 tokens), but the rest can be found in the notebook mentioned above.
 
-![Attention Block 8](./figures/week13_report_custom_inference_cpu_time.png)
+![Custom attention block 4 mask](./figures/custom_block4_head0_short.png)
+![Custom attention block 11 mask](./figures/custom_block11_head0_short.png)
+
+As explained above, these masks are the result of a linear combination of the masks by the alphas, such as in the following graphic:
+
+![Custom attention mask combination](./figures/custom_final.png)
+
+The generated output text is provided in the section below, and are generally pretty coherent. We believe this is due to the fact that the custom model was a copy of GPT-2 with its parameters frozen, and then only the alpha coefficients were trained. As a result, this model cannot deviate too far from the baseline GPT-2 model, so we would expect the outputs to still be coherent.
+
+We also tried training the model with both the KL-divergence loss combined with the cross-entropy loss for the next token prediction. Again, the training and validation loss did steadily decrease, but it did not lead to a noticeable improvement in output coherence (likely since the original output was already largely coherent). Due to this, we will not include sample outputs or alpha heatmaps as they are largely indistinguishable from the prior results (they can be seen in the [Custom Masks Notebook](notebooks/Custom_masks_implementation.ipynb)).
+
+![Custom model KL-divergence with next token prediction training loss](./figures/custom_kl_token_train_loss.png)
+![Custom model KL-divergence with next token prediction validation loss](./figures/custom_kl_token_val_loss.png)
+
+We also tracked the training and inference wall clock times, CPU clock times, CPU memory, and GPU memory usage. While the training plots don't provide much insight into the time and space efficiency of the model compared to the baseline full attention model, they are still interesting to look at:
+
+![Custom Attention Wall Time](./figures/week13_report_custom_training_wall_time.png)
+![Custom Attention CPU Time](./figures/week13_report_custom_training_cpu_time.png)
+![Custom Attention CPU Memory Usage](./figures/week13_report_custom_training_cpu_mem.png)
+![Custom Attention GPU Memory Allocation](./figures/week13_report_custom_training_gpu_mem.png)
+
+More images can be found in the [`./figures`](./figures) folder. However, looking at the CPU time for inference does provide some interesting information. This graph plots the output token length versus the time it took to run:
+
+![Custom attention cpu inference time](./figures/week13_report_custom_inference_cpu_time.png)
 
 As you can see, this appears to be linear, which is what we expect with this linear combination of attention masks approach (since the masks together only attend 5 tokens).
 
-TODO add the other pictures? like the heatmap like picture and whatever else we discussed in the presentation
+Lastly, we also tried adding an L1 penalty to the loss on the size of the alphas. The idea of this was to encourage sparsity, so hopefully unimportant tokens' coefficients would go to zero. When we did this, we did indeed see this was the case. The results above are all provided without the L1 penalty in the loss formulation to be more consistent with the other models tested. Furthermore, we also tried to randomly initialize the alphas instead of at zero (which is what was done above). When we did this, most of the alphas tended to stay very close to their initialization points. This led to much more variability in the results, so they were initialized at zero for more consistency.
+
+An interesting area to look into the future is analyzing the importance of specific alphas. Based on the graphs above, one would assume that for the unimportant masks, those tokens can be completely ignored. Hence for future work we could rerun the tests with a subset of the masks, only the important ones, and should expect similar results. The output should be similarly coherent.
 
 ### Performer
 
@@ -191,10 +219,10 @@ We tracked the time for training with the NSA implementation and CPU/GPU usage. 
 ![NSA (Loss: KL + Next Predicted Token) GPU Memory Allocation](./figures/nsa_gpu_alloc.png)
 
 **Key Observations**
-Overall, the loss decreases steadily during training and we ultimately achieved low KL-divergence between the baseline and custom model, confirming that the custom model is aligning its output distribution to GPT-2's. However, this statistical similarity doesn’t translate to human-perceived quality since many of the outputs for both the Performer model and Native Sparse Attention are not coherent or clearly lacking compared to GPT2. Since KL-divergence alone might be an insufﬁcient metric for capturing language quality and coherence and there is a gap between statistical and semantic performance (aligning token distribution patterns is not enough), we also trained the models while minimizing for KL-divergence and next token prediction. However, we still did not notice notable coherence improvements. TODO talk ab dataset mismatch ??
 
-Further, while we attempted to measure speed and memory improvements, the results are not clear from the graph. Intrinsically, the architectures we used all have sublinear performance for
-memory/time in the attention mechanism.
+Overall, the loss decreases steadily during training and we ultimately achieved low KL-divergence between the baseline and custom model, confirming that the custom model is aligning its output distribution to GPT-2's. However, this statistical similarity doesn't translate to human-perceived quality since many of the outputs for both the Performer model and Native Sparse Attention are not coherent or clearly lacking compared to GPT2. Since KL-divergence alone might be an insufficient metric for capturing language quality and coherence and there is a gap between statistical and semantic performance (aligning token distribution patterns is not enough), we also trained the models while minimizing for KL-divergence and next token prediction. However, we still did not notice notable coherence improvements. We hypothesize that this is due to the mismatch in the datasets used. GPT-2 was originally trained on a dataset excluding Wikipedia, while our models were trained on only Wikipedia data. This mismatch might be the cause for poor model performance as we're effectively running on data out of sample.
+
+Further, while we attempted to measure speed and memory improvements, the results are not clear from the graph. Intrinsically, the architectures we used all have sublinear performance for memory/time in the attention mechanism, but the training measurements don't help demonstrate this.
 
 Overall, it seems from our experiments that the simplest approach worked best, potentially since it has the least capacity to change the underlying model. It's possible that more complex mechanisms changed the attention structure and training potentially adapted model to the WikiText-2 dataset.
 
@@ -255,7 +283,7 @@ The models still produce recognizable English words. This shows the model is cap
 
 ### Limitations
 
-- **Different Datasets**: We trained our attention optimization implementations on the WikiText-2 dataset, which is different than the proprietary dataset that GPT2 was originally trainied on. This could have contributed to weaker learning TODO.
+- **Different Datasets**: We trained our attention optimization implementations on the WikiText-2 dataset, which is different than the proprietary dataset that GPT2 was originally trained on. This could have contributed to weaker inference because the parameters were being tuned away from the baseline (which produced coherent text on a general basis).
 - **Limited Training**: Currently all of our implementations only train for 50 epochs. Further, we have slightly different implementations for each custom model, so more standardization could be helpful.
 - **No Large Model**: GPT-2 was used purely for demonstration; we have not tested on bigger or more modern architectures.
 - **Compute Constraints**: Google Colab Notebooks only allowed us to train on GPUs for ~3-4 hrs/day and the runtime often disconnected. This caused a slow iteration speed and made it difficult to test several hyperparameter configurations. While we tried to use Google Cloud to access more powerful GPUs and TPUs with the provided credit, we were unable to set this up.
@@ -274,19 +302,18 @@ On one T4 GPU on Google Colab, training the Performer and NSA model for 50 epoch
 
 ## Future Steps
 
-TODO
-
 - **Different Dataset**: Use the original GPT2 model to generate training data to use so that the training data is similar to the original dataset used to train the GPT2 model. This would address some of the concerns of using a different dataset to train our attention optimizations than the proprietary dataset used to train GPT2.
 - **Fine-Tune Hyperparameters:** Adjust learning rates and sequence lengths and tune hyperparameters more to improve stability and convergence.
 - **Baseline Models**: Evaluate other baseline models besides GPT2.
 - **Loss Functions**: Try other loss functions besides KL divergence and next token prediction to include other modifications to see if output text is more coherent. We could also experiment more with regularization, early stopping, and other methods.
+- **Custom Masks Tuning**: Try to test and tune with different attention masks. Provided the results above, we can look at which tokens seemed important and which did not, and we should expect to see masks including only the important ones are still mostly coherent.
 - **Larger Context Windows**: Train with more compute and larger context windows.
 - **Attention Restructuring**: Fix incoherent context later in the sentence generation.
 
 ### What You've Learned So Far
 
 - **Simple models work**: Out of our three implementations for attention optimizations, the simplest method of using linear combinations of attention masks had the best performance and was most similar to the original output. This is most likely due to the fact that the linear combination attention masks changed the GPT2 model the least so the model retained more information from its original training.
-- **Adaptive optimization methods**: We learned more about how different adaptive optimization methods change the performance of the final model. We tried different optimizers when determining the optimal parameters in the attention layers. We ended up utilizing the AdamW optimizer for our final implementation because it decouples the weight decay from the adaptive udpate mechanism.
+- **Adaptive optimization methods**: We learned more about how different adaptive optimization methods change the performance of the final model. We tried different optimizers when determining the optimal parameters in the attention layers. We ended up utilizing the AdamW optimizer for our final implementation because it decouples the weight decay from the adaptive update mechanism.
 - **Learning rate schedulers**: We learned how learning rate schedulers can help training models when the parameters get stuck in a local minimum during training. When the training the Performer implementation, we initially hit a noise floor and the scheduler helped get past this. We settled on using the CosineAnnealing scheduler.
 - **Attention Optimizations**: Experimenting with different attention optimizers gave us better insight into how transformers work and latest research into how people are optimizing attention layers to improve memory and time efficiency during training.
 - **Attention Substitution**: Swapping out the standard self-attention module is straightforward if we mirror the input-output shapes and track weights carefully. However, fine tuning and training were harder than expected, especially with runtime/compute issues.
