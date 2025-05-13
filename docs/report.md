@@ -12,22 +12,22 @@ We seek to overcome the inherent $O(n^2)$ time and memory bottleneck in Transfor
 
 As more research has been done with large language models (LLMs), one common result is increasing the size of the model. In recent years, the size of models have grown exponentially, and models cannot fit in single GPU memory. Thus, one goal now is to use fewer parameters and find ways to represent large models more compactly. Existing research has been done to build more efficient LLMs, such as the Lottery Ticket hypothesis to make smaller networks (find important parts of the network, throw away the rest) and distillation. At the same time, another issue lies with attention.
 
-Transformer-based language models have become central to a wide variety of NLP tasks, but they quickly become impractical for very long sequences due to quadratic complexity. Improving their attention efficiency can enable longer contexts and reduce hardware costs.
+Transformer-based language models have become central to a wide variety of NLP tasks, but they quickly become impractical for very long sequences due to their quadratic complexity. Improving their attention efficiency can enable longer contexts and reduce hardware costs.
 
 ### How Will We Measure Success?
 
 1. **Natural Language Flow**: Does the custom attention model perform comparably (in terms of coherence and fluency) to the baseline in generating text? This involves human evaluation on grammatical correctness, logical flow, and overall readability as well as evaluating the diversity of outputs (analyzing the variety in generated responses to the same prompts to ensure that the model does not produce repetitive or overly similar outputs, which can indicate a lack of creativity in language generation).
-2. **Distribution Alignment**: A lower KL-divergence between the custom model's outputs and the baseline model signals successful attention optimization.
+2. **Distribution Alignment**: A lower KL-divergence between the custom model's outputs and the baseline model's outputs signals successful attention optimization.
 3. **Next Token Predictability**: A low CrossEntropyLoss for computing the next token in the sequence implies the model is successfully predicting text.
 4. **Computational Improvement**: We will track how well the approach scales with sequence length, aiming for reduced memory usage or speed gains.
 
 ### What Are Our Constraints?
 
-Despite GPT2 being trained on a different dataset, the original dataset is not publicly available (OpenAI scrapped web data and excluded Wikipedia pages). We currently use **WikiText-2** as our primary dataset for language modeling. It is freely available, moderate in size (roughly 2 million tokens), and standard for benchmarking. We want to be able to process sequences of up to 128 tokens (as a starting point) on a single GPU without out-of-memory errors, implement the code in standard PyTorch, avoiding highly specialized CUDA kernels, as well as have enough compute resources to train models until the loss levels off.
+The original dataset GPT-2 was trained on is not publicly available (OpenAI scrapped web data and excluded Wikipedia pages). We currently use **WikiText-2** as our primary dataset for language modeling. It is freely available, moderate in size (roughly 2 million tokens), and standard for benchmarking. We want to be able to process sequences of up to 128 tokens (as a starting point) on a single GPU without out-of-memory errors, implement the code in standard PyTorch, avoiding highly specialized CUDA kernels, as well as have enough compute resources to train models until the loss levels off.
 
 ### What Data Do We Need?
 
-From literature review, many state of the art models and studies are done using **WikiText-2** for initial experimentation and evaluation. WikiText-2 is built from Wikipedia articles and is curated and easy to use. There are about two million tokens in the training set, about 220,000 tokens in the validation set, and about 240,000 tokens in the test set. As we scale up our approach and test longer context windows, we envision potentially using WikiText-103 or other larger corpora in the
+From literature review, many state of the art models and studies are done using **WikiText-2** for initial experimentation and evaluation. WikiText-2 is built from Wikipedia articles and is curated and easy to use. There are about two million tokens in the training set, about 220,000 tokens in the validation set, and about 240,000 tokens in the test set. As we scale up our approach and test longer context windows, we envision potentially using WikiText-103 or other larger corpora.
 
 ### What Could Go Wrong?
 
@@ -101,8 +101,8 @@ However, the model is generalizable to any set of attention masks, and could be 
 2. **Custom Attention Module**: We replace the default attention with a custom attention mechanism, either using a linear combination of attention masks or techniques from the Performer or the NSA.
 
    - Linear combination of attention masks: weighted combination of attention masks with learnable parameters dictating which tokens matter most
-   - Performer: implement a Performer using the base GPT2 model, replacing the attention layer with a kernel-based linear attention module (based on FAVOR+)
-   - Native Sparse Attention: implement hierarchical attention with compressed tokens, selective attention, and sliding window with a GPT2 model
+   - Performer: kernel-based linear attention module (based on FAVOR+)
+   - Native Sparse Attention: hierarchical attention with compressed tokens, selective attention, and sliding window
 
 3. **Loss Computation**: Compute logits from both models on the same input batch, then apply a loss function. Our loss function combines KL-divergence between probability distribution of next token from baseline model and custom model with the cross-entropy of the next token prediction.
 4. **Parameter Updates**: Use AdamW optimizer and Cosine Annealing scheduler to train the new attention module while freezing or partially freezing other layers. We use an initial learning rate of $10^{-3}$.
@@ -112,9 +112,10 @@ However, the model is generalizable to any set of attention masks, and could be 
 
 - **Validation Loss**: Track loss (KL-divergence and cross-entropy for next token prediction) on a held-out set to ensure the custom model matches the baseline distribution over time.
 
-- Load weights from baseline models (e.g., HuggingFace's `bert-base-uncased`), replace _only_ the attention module, and evaluate **without fine-tuning**.
-- Ensures optimization does not rely on retraining to "recover" lost accuracy.
-- L1 penalty for coefficients of attention masks (no penalty used for the results given - details explained below)
+  - Load weights from baseline models (e.g., HuggingFace's `bert-base-uncased`), replace _only_ the attention module, and evaluate **without fine-tuning**.
+  - Ensures optimization does not rely on retraining to "recover" lost accuracy.
+
+- **L1 penalty** for coefficients of attention masks (no penalty used for the results given - details explained below)
 - **Perplexity/Accuracy**: Evaluate on standard tasks (e.g., language modeling or classification) to ensure minimal drop in performance.
 - **Edge cases**: Sequences with extreme sparsity (e.g., all padding tokens) or high similarity (e.g., repeated tokens).
 - **Scalability Tests**: Gradually increase input sequence lengths and measure memory usage, throughput, and any speed improvements.
@@ -186,9 +187,7 @@ We first trained a custom model with solely KL-divergence as the loss function. 
 
 ![Performer KL-divergence validation loss](./figures/performer_kl_val_loss.png)
 
-However, while the training and validation loss both seem to be steadily decreasing, the output texts were not very coherent (provided in the section below).
-
-We also trained the Performer model with a loss function that included KL-divergence combined with next token prediction to try to improve output coherence. While the training loss decreased from 7.1806 to 2.3782 over 50 epochs, the validation loss increased, suggesting overfitting. This divergence between training and validation performance indicates that the model was memorizing patterns specific to the training data rather than learning generalizable features.
+However, while the training and validation loss both seem to be steadily decreasing, the output texts were not very coherent (provided in the section below). To explore possible reasons for this, we also trained the Performer model with a loss function that included KL-divergence combined with next token prediction to try to improve output coherence. While the training loss decreased from 7.1806 to 2.3782 over 50 epochs, the validation loss increased, suggesting overfitting. This divergence between training and validation performance indicates that the model was memorizing patterns specific to the training data rather than learning generalizable features.
 
 ![Performer KL-divergence with next token prediction training loss](./figures/performer_kl_token_train_loss.png)
 
@@ -202,6 +201,8 @@ We also tracked the time and CPU/GPU usage during training. While these plots do
 ![Performer (Loss: KL + Next Token Prediction) CPU Time](./figures/performer_cpu_time.png)
 ![Performer (Loss: KL + Next Token Prediction) CPU Memory Usage](./figures/performer_cpu_mem.png)
 ![Performer (Loss: KL + Next Token Prediction) GPU Memory Allocation](./figures/performer_gpu_alloc.png)
+
+A key aspect of further exploration can involve a Kerformer or another kernel method transformer. The FAVOR+ mechanism in Performer uses random features for approximation, which need to be properly initialized and calibrated, and the inherent randomness aspect makes it difficult to train a model's weights to align with GPT-2. For further work, we could experiment with different kernel approximations (Gaussian, ReLU, etc.). Also, another similar idea involves making the mapping a learnable neural network to help it adapt and better approximate the attention mechanism.
 
 ### Native Sparse Attention
 
@@ -226,7 +227,7 @@ We tracked the time for training with the NSA implementation and CPU/GPU usage. 
 ![NSA (Loss: KL + Next Predicted Token) CPU Memory Usage](./figures/nsa_cpu_mem.png)
 ![NSA (Loss: KL + Next Predicted Token) GPU Memory Allocation](./figures/nsa_gpu_alloc.png)
 
-**Key Observations**
+### Key Observations
 
 Overall, the loss decreases steadily during training and we ultimately achieved low KL-divergence between the baseline and custom model, confirming that the custom model is aligning its output distribution to GPT-2's. However, this statistical similarity doesn't translate to human-perceived quality since many of the outputs for both the Performer model and Native Sparse Attention are not coherent or clearly lacking compared to GPT2. Since KL-divergence alone might be an insufficient metric for capturing language quality and coherence and there is a gap between statistical and semantic performance (aligning token distribution patterns is not enough), we also trained the models while minimizing for KL-divergence and next token prediction. However, we still did not notice notable coherence improvements. We hypothesize that this is due to the mismatch in the datasets used. GPT-2 was originally trained on a dataset excluding Wikipedia, while our models were trained on only Wikipedia data. This mismatch might be the cause for poor model performance as we're effectively running on data out of sample.
 
@@ -257,17 +258,20 @@ The models still produce recognizable English words. This shows the model is cap
 **Prompt**: In a shocking turn of events,
 
 - **Reference**: In a shocking turn of events, on 2 August last year he was arrested for the murder of two people in his flat. The victims were aged 21 and 22; both men are now dead...
-- **Custom**: In a shocking turn of events, and to get drunk as well with little girls in the night before entering its relationship between friends who became an investigation. However much like their past...
+- **Custom (KL-div only)**: In a shocking turn of events, and to get drunk as well with little girls in the night before entering its relationship between friends who became an investigation. However much like their past...
+- **Custom (KL-div + CE loss)**: In a shocking turn of events, 7 was and briefly , the and its form 1941 the of to armedogy C an Chrig . Pay River shipping . also performed written the . Nom had Pzzis Peter Olivia ( in for in the of present she accomplished and were again without ...
 
 **Prompt**: The future of artificial intelligence
 
 - **Reference**: The future of artificial intelligence will involve creating a machine with the ability to solve complex problems and problem-solving skills that can be learned over time, by making choices based on which data is kept nearby...
-- **Custom**: The future of artificial intelligence service, in the first instance; that both sides because there is a particular to be used for those who could not only one's power. Some are always have been very well-ease and his ability , it was at...
+- **Custom (KL-div only)**: The future of artificial intelligence service, in the first instance; that both sides because there is a particular to be used for those who could not only one's power. Some are always have been very well-ease and his ability , it was at...
+- **Custom (KL-div + CE loss)**: The future of artificial intelligence a @@ publishing with extraets played Black , the of , the . range north exit north A luc ( by Dylan sold its broadcast September04 18 2012 Ryanbgeog , the , is in lb ifwhite N Eck made and the . also the and , the of famous...
 
-**Prompt**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars
+**Prompt**: The meaning of life is
 
-- **Reference**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars. He was alone but in darkness for a moment before he heard his brother's cries and saw him pass by it...
-- **Custom**: As the sun set behind the towering mountains, the weary traveler finally caught sight of the distant village, its warm lights flickering like tiny stars around a temple. The second floor which is still standing right and that has an ancient Egyptian tomb , so it was...
+- **Reference**: The meaning of life is the way you live it - not your physical existence. It's up to us, our children and grandchildren... I'm sure my dear brothers will find that out soon enough." The boys sat down on a bench in front me as I stood beside them ...
+- **Custom (KL-div only)**: The meaning of life is also the use to be, where you can find out. The reason for an individual human beings and one who are a major problems with no other than when we're already in some people . In both men's desire becomes...
+- **Custom (KL-div + CE loss)**: The meaning of life is Southline to " a that hadanted Gale were , was four @@ to the . , he was and it publication Liu " and Clistic . it toinc noted as of . Song fired firm and , from Japanological platform , with Egypt in95 However the...
 
 #### Native Sparse Attention
 
