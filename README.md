@@ -16,7 +16,9 @@ This project focuses on optimizing attention mechanisms in Transformer models to
 
 Our key findings show that the simplest approach (linear combination of attention masks) performed best in terms of output coherence and similarity to the baseline GPT-2 model. The loss function we chose to minimize is the KL divergence, which measures the difference between two probability distributions of the next token for prediction. While we achieved low KL-divergence between our custom models and the baseline, we discovered that statistical similarity doesn't necessarily translate to human-perceived quality in generated text. Most of the text from the Performer and NSA model were not coherent. We hypothesize that this is due to the mismatch in the datasets used. GPT-2 was trained on a dataset excluding Wikipedia, while our models were trained on only Wikipedia data. This mismatch between the training data might be the cause for poor model performance.
 
-We also tried calculating the loss based on the CrossEntropyLoss between the tested model and the actually correct output token. We added this loss term for next token prediction, but found that it did not improve output coherence either in any model.
+We also tried calculating the loss based on the cross-entropy between the tested model and the actually correct output token. We added this loss term for next token prediction, but found that it did not improve output coherence either in any model.
+
+A detailed report of the methodologies and all the findings can be found in [`docs/report.md`](docs/report.md).
 
 #### Key Limitations
 
@@ -38,16 +40,18 @@ We also tried calculating the loss based on the CrossEntropyLoss between the tes
 ```
 .
 ├── docs/           # Documentation and report files
-│   ├── report.md     # Final project report
+│   ├── report.md   # Final project report
 │   ├── Final_Presentation_Slides.pdf    # Final slides
 │   └── figures/    # Project figures and visualizations
 ├── notebooks/      # Jupyter notebooks implementations
 └── _archive/       # Development history
 ```
 
-Development history: previous versions and drafts of report and notebooks of attention optimization implementations; older versions are labeled with the week when they were created.
+Development history: previous versions and drafts of report and notebooks of attention optimization implementations can be found in [`_archive`](_archive); older versions are labeled with the week when they were created.
 
 ## Setup Instructions
+
+Most of the implementations are done as Google Colab notebooks, and can be directly run in Google Colab.
 
 1. Python Environment:
 
@@ -57,7 +61,7 @@ Development history: previous versions and drafts of report and notebooks of att
      python -m venv venv
      source venv/bin/activate  # On Unix/macOS
      # or
-     .\venv\Scripts\activate  # On Windows
+     .\venv\Scripts\activate   # On Windows
      ```
 
 2. GPU Requirements:
